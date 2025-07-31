@@ -34,7 +34,7 @@
 path: ./plugins 
 # 启用的群列表，所有插件的全局配置
 groups: [] 
-# 各插件配置(下面以core插件示范)
+# 各插件配置(下面以core插件和livebili插件示范)
 plugins:
   # core插件的配置
   core:
@@ -53,4 +53,19 @@ plugins:
       help_top: 下面是我的所有本领！
       help_tail: 更多本领绝赞学习中,加入github.com/KohmeBot来教会我吧！
     # ... 若有其他键值对，将会作为插件的环境变量传入
+
+  livebili:
+    # 插件仓库地址 
+    repo: github.com/kohmebot/livebili
+    # 指定插件版本,不填,默认latest(最新版本)  version: v0.0.15 则下载对应插件的v0.0.15版本
+    version: latest
+    seq: 1
+    conf:
+      # ...
 ```
+
+### 编译与启动
+- windows执行`build.bat`
+- linux执行`build.sh`
+
+构建脚本会自动获取插件并编译二进制文件于本目录,运行即可

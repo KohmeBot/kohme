@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	fplugin "github.com/kohmebot/kohme/pkg/plugin"
-	"github.com/kohmebot/kohme/pkg/version"
+	"github.com/kohmebot/pkg/version"
 	"github.com/kohmebot/plugin"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"

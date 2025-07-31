@@ -1,0 +1,15 @@
+{
+  "zero": {
+    "nick_name": ["kohme"],
+    "command_prefix": "/",
+    "super_users": []
+  },
+  "ws": {
+    "url": "ws://127.0.0.1:3001",
+    "token": ""
+  },
+  "rws": {
+    "url": "ws://127.0.0.1:3002",
+    "token": ""
+  }
+}

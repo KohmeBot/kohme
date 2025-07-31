@@ -3,13 +3,13 @@ package app
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/db"
-	"github.com/kohmebot/kohme/pkg/chain"
-	"github.com/kohmebot/kohme/pkg/gopool"
+	"github.com/kohmebot/pkg/chain"
+	"github.com/kohmebot/pkg/gopool"
 	"github.com/kohmebot/plugin"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
+	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 	"os"
 	"path/filepath"
@@ -105,7 +105,12 @@ func (e *Env) RangeBot(yield func(ctx *zero.Ctx) bool) {
 }
 
 func (e *Env) GetConf(conf any) error {
-	if err := mapstructure.Decode(e.customConf.Conf, conf); err != nil {
+	data, err := yaml.Marshal(e.customConf.Conf)
+	if err != nil {
+		return fmt.Errorf("解析配置错误: %v", err)
+	}
+	err = yaml.Unmarshal(data, conf)
+	if err != nil {
 		return fmt.Errorf("解析配置错误: %v", err)
 	}
 	return nil

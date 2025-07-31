@@ -3,10 +3,10 @@ package app
 import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/kohmebot/kohme/pkg/chain"
-	"github.com/kohmebot/kohme/pkg/command"
-	"github.com/kohmebot/kohme/pkg/gopool"
-	"github.com/kohmebot/kohme/pkg/version"
+	"github.com/kohmebot/pkg/chain"
+	"github.com/kohmebot/pkg/command"
+	"github.com/kohmebot/pkg/gopool"
+	"github.com/kohmebot/pkg/version"
 	"github.com/kohmebot/plugin"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
@@ -20,8 +20,8 @@ import (
 var v = version.NewVersion(0, 0, 40)
 
 type CoreConf struct {
-	HelpTop  string `yaml:"help_top" mapstructure:"help_top"`
-	HelpTail string `yaml:"help_tail" mapstructure:"help_tail"`
+	HelpTop  string `yaml:"help_top"`
+	HelpTail string `yaml:"help_tail"`
 }
 
 type Core struct {

@@ -74,6 +74,10 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 
 // CustomPluginConf 自定义插件配置
 type CustomPluginConf struct {
+	// 插件仓库地址
+	Repo string `yaml:"repo"`
+	// 插件指定版本
+	Version string `yaml:"version"`
 	// 决定加载顺序
 	Seq int64 `yaml:"seq"`
 	// 是否排除(不加载)
