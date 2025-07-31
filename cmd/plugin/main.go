@@ -27,6 +27,15 @@ func plugins() []plugin.Plugin {
 `
 
 func main() {
+	defer func() {
+		r := recover()
+		if r != nil {
+			_ = writePlugin([]byte(fmt.Sprintf(template, "", "")))
+			panic(r)
+		}
+
+	}()
+
 	pluginConf := app.PluginConf{}
 
 	err := pluginConf.ParseYamlFile(conf.PluginConfigPath)
