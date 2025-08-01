@@ -7,8 +7,8 @@ import "github.com/kohmebot/plugin"
 
 var plugins []plugin.Plugin
 
-func Register(f func() plugin.Plugin) {
-	plugins = append(plugins, f())
+func Register(p plugin.Plugin) {
+	plugins = append(plugins, p)
 }
 
 func GetPlugins() []plugin.Plugin {
