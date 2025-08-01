@@ -1,26 +1,25 @@
 @echo off
+setlocal enabledelayedexpansion
+
 set project=kohme
 
-REM 整理依赖
+REM go mod tidy
 go mod tidy
-if errorlevel 1 (
+IF ERRORLEVEL 1 (
     exit /b 1
-    pause
 )
 
-REM 运行插件
-go run ./cmd/plugin
-if errorlevel 1 (
+REM go generate
+go generate
+IF ERRORLEVEL 1 (
     exit /b 1
-    pause
 )
 
-REM 编译项目
-go build -ldflags "-s -w" -o %project%.exe ./cmd/bot
-if errorlevel 1 (
+REM go build
+set CGO_ENABLED=1
+go build -ldflags "-s -w" -o %project% ./cmd/bot
+IF ERRORLEVEL 1 (
     exit /b 1
-    pause
 )
 
-echo Build success: %project%.exe
-pause
+echo build success %project%

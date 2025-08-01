@@ -1,12 +1,11 @@
 package main
 
 import (
+	"github.com/kohmebot/kohme"
 	"github.com/kohmebot/kohme/internal/app"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/plugin"
 )
-
-var defaultPlugins []plugin.Plugin
 
 func main() {
 	aConf := app.AConf{}
@@ -26,11 +25,11 @@ func main() {
 	a := app.New(
 		app.WithAppConf(aConf),
 		app.WithPluginConf(pluginConf),
-		app.WithPlugin(defaultPlugins...),
+		app.WithPlugin(kohme.GetPlugins()...),
 	)
 	panic(a.Start())
 }
 
-func init() {
-	defaultPlugins = plugins()
+func register(f func() plugin.Plugin) {
+	kohme.Register(f)
 }

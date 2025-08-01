@@ -5,9 +5,9 @@ set -e
 
 go mod tidy
 
-go run ./cmd/plugin
+go generate
 
-go build -ldflags "-s -w" -o $project ./cmd/bot
+CGO_ENABLED=1 go build -ldflags "-s -w" -o $project ./cmd/bot
 
 
 # docker build -t $project .
