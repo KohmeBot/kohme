@@ -1,5 +1,6 @@
 ## 须知
-运行前，需要在根目录下创建conf文件夹，并新建config.json和plugins.yaml两个配置文件
+运行前，需要在项目根目录下创建conf文件夹，并新建config.json和plugins.yaml两个配置文件
+已有可以忽略
 
 ### config.json
 复制后请删掉注释，json不支持注释
@@ -29,9 +30,10 @@
 ```
 
 ### plugins.yaml
+插件的总配置
 ```yaml
 # 插件目录
-path: ./plugins 
+path: ./conf 
 # 启用的群列表，所有插件的全局配置
 groups: [] 
 # 各插件配置(下面以core插件和livebili插件示范)
@@ -63,6 +65,26 @@ plugins:
     conf:
       # ...
 ```
+
+### 多文件插件配置
+Kohme支持通过多个文件配置插件，放在`plugins.yaml`中指定的`path`目录，配置文件写法如下
+#### my_plugin_groups.yaml
+```yaml
+livebili:
+    # 插件仓库地址 
+    repo: github.com/kohmebot/livebili
+    # 指定插件版本,不填,默认latest(最新版本)  version: v0.0.15 则下载对应插件的v0.0.15版本
+    version: latest
+    seq: 1
+    conf:
+      # ...
+
+chatai:
+    repo: github.com/kohmebot/chatai
+    conf:
+      # ...
+```
+    
 
 ### 编译与启动
 - windows执行`build.bat`

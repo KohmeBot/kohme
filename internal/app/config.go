@@ -3,12 +3,15 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/plugin"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/driver"
 	"gopkg.in/yaml.v3"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 )
 
 type WsConf struct {
@@ -67,6 +70,42 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 
 	if err := yaml.Unmarshal(file, c); err != nil {
 		return fmt.Errorf("解析 YAML 文件错误: %w", err)
+	}
+
+	if len(c.Path) == 0 {
+		c.Path = conf.PluginPath
+	}
+
+	return c.ParseFromDir(c.Path)
+}
+
+func (c *PluginConf) ParseFromDir(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("无法读取目录: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") {
+			fullPath := filepath.Join(dir, name)
+
+			if fullPath == filepath.Clean(conf.PluginConfigPath) {
+				continue
+			}
+			data, err := os.ReadFile(fullPath)
+			if err != nil {
+				return fmt.Errorf("无法读取文件 %s: %w", fullPath, err)
+			}
+
+			if err := yaml.Unmarshal(data, c.Plugins); err != nil {
+				return fmt.Errorf("解析 YAML 文件 %s 错误: %w", fullPath, err)
+			}
+		}
 	}
 
 	return nil
