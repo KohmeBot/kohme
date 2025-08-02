@@ -1,9 +1,8 @@
-package app
+package conf
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/plugin"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/driver"
@@ -19,13 +18,13 @@ type WsConf struct {
 	Token string `json:"token"`
 }
 
-type AConf struct {
+type ZeroConf struct {
 	Zero      zero.Config `json:"zero"`
 	Ws        WsConf      `json:"ws"`
 	ReverseWs WsConf      `json:"rws"`
 }
 
-func (c *AConf) InitDriver() {
+func (c *ZeroConf) initDriver() {
 	var ds []zero.Driver
 	if c.Ws.Url != "" {
 		// 正向Ws
@@ -38,7 +37,7 @@ func (c *AConf) InitDriver() {
 	c.Zero.Driver = ds
 }
 
-func (c *AConf) ParseJsonFile(path string) error {
+func (c *ZeroConf) ParseJsonFile(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("无法打开 JSON 文件: %w", err)
@@ -50,7 +49,7 @@ func (c *AConf) ParseJsonFile(path string) error {
 		return fmt.Errorf("解析 JSON 文件错误: %w", err)
 	}
 
-	c.InitDriver()
+	c.initDriver()
 
 	return nil
 }
@@ -73,13 +72,13 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 	}
 
 	if len(c.Path) == 0 {
-		c.Path = conf.PluginPath
+		c.Path = PluginPath
 	}
 
-	return c.ParseFromDir(c.Path)
+	return c.parseFromDir(c.Path)
 }
 
-func (c *PluginConf) ParseFromDir(dir string) error {
+func (c *PluginConf) parseFromDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("无法读取目录: %w", err)
@@ -94,7 +93,7 @@ func (c *PluginConf) ParseFromDir(dir string) error {
 		if strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") {
 			fullPath := filepath.Join(dir, name)
 
-			if fullPath == filepath.Clean(conf.PluginConfigPath) {
+			if fullPath == filepath.Clean(PluginConfigPath) {
 				continue
 			}
 			data, err := os.ReadFile(fullPath)
@@ -136,15 +135,15 @@ type CustomPluginConf struct {
 // PluginConfMap 插件配置映射，key为插件名称
 type PluginConfMap map[string]CustomPluginConf
 
-// 过滤不需要加载的插件
-func (mp PluginConfMap) filterInvalidPlugins(plugins []plugin.Plugin) []plugin.Plugin {
+// FilterInvalid 过滤不需要加载的插件
+func (mp PluginConfMap) FilterInvalid(plugins []plugin.Plugin) []plugin.Plugin {
 	return slices.DeleteFunc(plugins, func(p plugin.Plugin) bool {
 		return mp[p.Name()].Exclude
 	})
 }
 
-// 根据顺序排序插件
-func (mp PluginConfMap) sortPluginsBySequence(plugins []plugin.Plugin) {
+// SortBySequence 根据顺序排序插件
+func (mp PluginConfMap) SortBySequence(plugins []plugin.Plugin) {
 	slices.SortFunc(plugins, func(a, b plugin.Plugin) int {
 		aSeq := mp[a.Name()].Seq
 		bSeq := mp[b.Name()].Seq

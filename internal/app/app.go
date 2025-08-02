@@ -69,9 +69,9 @@ func (a *App) RegisterPlugins(pluginsToAdd ...plugin.Plugin) {
 	pluginsConfig := a.opt.PluginConf.Plugins
 
 	// 过滤掉不需要加载的
-	filteredPlugins := pluginsConfig.filterInvalidPlugins(pluginsToAdd)
+	filteredPlugins := pluginsConfig.FilterInvalid(pluginsToAdd)
 	// 为加载顺序排序
-	pluginsConfig.sortPluginsBySequence(filteredPlugins)
+	pluginsConfig.SortBySequence(filteredPlugins)
 
 	// 插入并配置插件
 	for _, p := range filteredPlugins {

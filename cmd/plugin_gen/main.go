@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/kohmebot/kohme/internal/app"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"os"
 	"os/exec"
@@ -29,7 +28,7 @@ const genPath = "./cmd/bot/plugin.gen.go"
 
 func main() {
 
-	pluginConf := app.PluginConf{}
+	pluginConf := conf.PluginConf{}
 
 	if err := pluginConf.ParseYamlFile(conf.PluginConfigPath); err != nil {
 		panic(err)
@@ -65,7 +64,7 @@ func main() {
 
 }
 
-func gen(plugins app.PluginConfMap) error {
+func gen(plugins conf.PluginConfMap) error {
 	var (
 		importBuilder strings.Builder
 		newBuilder    strings.Builder

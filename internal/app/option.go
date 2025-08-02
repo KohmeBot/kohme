@@ -1,12 +1,15 @@
 package app
 
-import "github.com/kohmebot/plugin"
+import (
+	"github.com/kohmebot/kohme/pkg/conf"
+	"github.com/kohmebot/plugin"
+)
 
 type Option func(opt *option)
 
 type option struct {
-	PluginConf     PluginConf
-	AppConf        AConf
+	PluginConf     conf.PluginConf
+	AppConf        conf.ZeroConf
 	DefaultPlugins []plugin.Plugin
 }
 
@@ -16,13 +19,13 @@ func WithPlugin(p ...plugin.Plugin) Option {
 	}
 }
 
-func WithPluginConf(conf PluginConf) Option {
+func WithPluginConf(conf conf.PluginConf) Option {
 	return func(opt *option) {
 		opt.PluginConf = conf
 	}
 }
 
-func WithAppConf(conf AConf) Option {
+func WithAppConf(conf conf.ZeroConf) Option {
 	return func(opt *option) {
 		opt.AppConf = conf
 	}
@@ -30,8 +33,8 @@ func WithAppConf(conf AConf) Option {
 
 func defaultOption() option {
 	return option{
-		PluginConf:     PluginConf{},
-		AppConf:        AConf{},
+		PluginConf:     conf.PluginConf{},
+		AppConf:        conf.ZeroConf{},
 		DefaultPlugins: []plugin.Plugin{},
 	}
 }

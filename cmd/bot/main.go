@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	aConf := app.AConf{}
+	aConf := conf.ZeroConf{}
 
 	err := aConf.ParseJsonFile(conf.BotConfigPath)
 	if err != nil {
 		panic(err)
 	}
 
-	pluginConf := app.PluginConf{}
+	pluginConf := conf.PluginConf{}
 
 	err = pluginConf.ParseYamlFile(conf.PluginConfigPath)
 	if err != nil {

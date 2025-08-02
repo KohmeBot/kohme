@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/db"
+	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/pkg/chain"
 	"github.com/kohmebot/pkg/gopool"
 	"github.com/kohmebot/plugin"
@@ -17,7 +18,7 @@ import (
 )
 
 type Env struct {
-	customConf   CustomPluginConf
+	customConf   conf.CustomPluginConf
 	p            plugin.Plugin
 	otherPlugins map[string]plugin.Plugin
 	disable      atomic.Bool
@@ -25,7 +26,7 @@ type Env struct {
 	group        *GroupsWithEnv
 }
 
-func NewEnv(p plugin.Plugin, customConf CustomPluginConf, otherPlugins map[string]plugin.Plugin) *Env {
+func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[string]plugin.Plugin) *Env {
 	e := &Env{
 		p:            p,
 		customConf:   customConf,
