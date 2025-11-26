@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kohmebot/kohme/internal/util"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	"io/fs"
 	"path/filepath"

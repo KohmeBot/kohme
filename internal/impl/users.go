@@ -1,6 +1,9 @@
-package app
+package impl
 
-import zero "github.com/wdvxdr1123/ZeroBot"
+import (
+	zero "github.com/wdvxdr1123/ZeroBot"
+	"iter"
+)
 
 type Users []int64
 
@@ -24,10 +27,12 @@ func (u Users) Rule() zero.Rule {
 	}
 }
 
-func (u Users) RangeUser(yield func(user int64) bool) {
-	for _, user := range u {
-		if !yield(user) {
-			return
+func (u Users) RangeUser() iter.Seq[int64] {
+	return func(yield func(int64) bool) {
+		for _, user := range u {
+			if !yield(user) {
+				return
+			}
 		}
 	}
 }

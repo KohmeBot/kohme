@@ -1,12 +1,11 @@
-package app
+package impl
 
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/db"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/pkg/chain"
-	"github.com/kohmebot/pkg/gopool"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/message"
@@ -21,18 +20,20 @@ type Env struct {
 	customConf   conf.CustomPluginConf
 	p            plugin.Plugin
 	otherPlugins map[string]plugin.Plugin
-	disable      atomic.Bool
+	Disable      atomic.Bool
 	superUser    Users
 	group        *GroupsWithEnv
+	envs         map[string]any
 }
 
-func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[string]plugin.Plugin) *Env {
+func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[string]plugin.Plugin, envs map[string]any) *Env {
 	e := &Env{
 		p:            p,
 		customConf:   customConf,
 		otherPlugins: otherPlugins,
+		envs:         envs,
 	}
-	e.disable.Store(customConf.Disable)
+	e.Disable.Store(customConf.Disable)
 	e.superUser = customConf.SuperUsers
 	e.group = NewGroupsWithEnv(customConf.Groups, e)
 	return e
@@ -54,7 +55,7 @@ func (e *Env) Error(ctx *zero.Ctx, err error) {
 	var msgChain chain.MessageChain
 
 	sendToSuperUsers := func() {
-		for user := range e.superUser.RangeUser {
+		for user := range e.superUser.RangeUser() {
 			ctx.SendPrivateMessage(user, msgChain)
 		}
 	}
@@ -86,11 +87,15 @@ func (e *Env) Error(ctx *zero.Ctx, err error) {
 		message.Text(err.Error()),
 	)
 
-	gopool.Go(send)
+	send()
+}
+
+func (e *Env) Set(key string, value any) {
+	e.envs[key] = value
 }
 
 func (e *Env) Get(key string) any {
-	return e.customConf.Other[key]
+	return e.envs[key]
 }
 
 func (e *Env) FilePath() (string, error) {
@@ -99,10 +104,13 @@ func (e *Env) FilePath() (string, error) {
 	return path, err
 }
 
-func (e *Env) RangeBot(yield func(ctx *zero.Ctx) bool) {
+func (e *Env) GetBot() *zero.Ctx {
+	var c *zero.Ctx
 	zero.RangeBot(func(id int64, ctx *zero.Ctx) bool {
-		return yield(ctx)
+		c = ctx
+		return false
 	})
+	return c
 }
 
 func (e *Env) GetConf(conf any) error {
@@ -132,9 +140,9 @@ func (e *Env) GetPlugin(name string) (p plugin.Plugin, ok bool) {
 
 // IsDisable 判断是否禁用
 func (e *Env) IsDisable() bool {
-	return e.disable.Load()
+	return e.Disable.Load()
 }
 
 func (e *Env) Toggle(b bool) {
-	e.disable.Store(!b)
+	e.Disable.Store(!b)
 }

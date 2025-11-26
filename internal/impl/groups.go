@@ -1,15 +1,18 @@
-package app
+package impl
 
 import (
 	zero "github.com/wdvxdr1123/ZeroBot"
+	"iter"
 )
 
 type Groups []int64
 
-func (g Groups) RangeGroup(yield func(group int64) bool) {
-	for _, group := range g {
-		if !yield(group) {
-			return
+func (g Groups) RangeGroup() iter.Seq[int64] {
+	return func(yield func(int64) bool) {
+		for _, group := range g {
+			if !yield(group) {
+				return
+			}
 		}
 	}
 }

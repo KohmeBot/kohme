@@ -5,7 +5,7 @@ import (
 	"github.com/kohmebot/kohme"
 	"github.com/kohmebot/kohme/internal/app"
 	"github.com/kohmebot/kohme/pkg/conf"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	"reflect"
 )
 

@@ -3,7 +3,7 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/driver"
 	"gopkg.in/yaml.v3"
@@ -28,10 +28,12 @@ func (c *ZeroConf) initDriver() {
 	var ds []zero.Driver
 	if c.Ws.Url != "" {
 		// 正向Ws
+		clear(ds)
 		ds = append(ds, driver.NewWebSocketClient(c.Ws.Url, c.Ws.Token))
 	}
 	if c.ReverseWs.Url != "" {
 		// 反向Ws
+		clear(ds)
 		ds = append(ds, driver.NewWebSocketServer(16, c.ReverseWs.Url, c.ReverseWs.Token))
 	}
 	c.Zero.Driver = ds
@@ -59,6 +61,8 @@ type PluginConf struct {
 	Path    string        `yaml:"path"`
 	Plugins PluginConfMap `yaml:"plugins"`
 	Groups  []int64       `yaml:"groups"`
+	// 其他不定字段,作为环境变量传入
+	Other map[string]any `yaml:",inline"`
 }
 
 func (c *PluginConf) ParseYamlFile(path string) error {
@@ -128,8 +132,6 @@ type CustomPluginConf struct {
 	SuperUsers []int64 `yaml:"super_users"`
 	// 插件自定义conf
 	Conf map[string]any `yaml:"conf"`
-	// 其他不定字段,作为环境变量传入
-	Other map[string]any `yaml:",inline"`
 }
 
 // PluginConfMap 插件配置映射，key为插件名称

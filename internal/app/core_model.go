@@ -1,11 +1,11 @@
 package app
 
-import "github.com/kohmebot/plugin"
+import "github.com/kohmebot/plugin/v2"
 
 // PluginRecord 插件记录
 type PluginRecord struct {
 	Name    string `gorm:"primaryKey"`
-	Version uint64
+	Version string
 }
 
 func PluginsToRecord(ps []plugin.Plugin) []PluginRecord {

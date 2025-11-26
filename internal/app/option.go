@@ -2,7 +2,7 @@ package app
 
 import (
 	"github.com/kohmebot/kohme/pkg/conf"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 )
 
 type Option func(opt *option)

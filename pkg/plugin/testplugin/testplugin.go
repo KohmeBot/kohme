@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/kohmebot/pkg/command"
 	"github.com/kohmebot/pkg/version"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"time"
 )

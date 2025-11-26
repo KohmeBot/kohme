@@ -3,7 +3,7 @@
 //go:generate go mod tidy
 package kohme
 
-import "github.com/kohmebot/plugin"
+import "github.com/kohmebot/plugin/v2"
 
 var plugins []plugin.Plugin
 

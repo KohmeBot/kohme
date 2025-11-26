@@ -2,11 +2,12 @@ package app
 
 import (
 	"fmt"
+	"github.com/kohmebot/kohme/internal/impl"
 	fplugin "github.com/kohmebot/kohme/pkg/plugin"
-	"github.com/kohmebot/pkg/version"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
+	"maps"
 )
 
 type App struct {
@@ -18,7 +19,7 @@ type App struct {
 	pluginMp map[string]plugin.Plugin
 	// 插件名称序列，这个表明了加载顺序
 	pluginNameSeq []string
-	envMp         map[string]*Env
+	envMp         map[string]*impl.Env
 }
 
 func New(opts ...Option) *App {
@@ -32,7 +33,7 @@ func New(opts ...Option) *App {
 		Engine:   zero.New(),
 		manager:  fplugin.NewPluginManager(defaultOpt.PluginConf.Path),
 		pluginMp: make(map[string]plugin.Plugin),
-		envMp:    make(map[string]*Env),
+		envMp:    make(map[string]*impl.Env),
 	}
 
 	return a
@@ -48,7 +49,7 @@ func (a *App) Start() error {
 
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
-		err = p.Init(a.Engine, a.envMp[p.Name()])
+		err = p.OnInit(impl.NewEngine(a.envMp[p.Name()], a.Engine), a.envMp[p.Name()])
 		if err != nil {
 			return fmt.Errorf("%s 初始化失败: %w", p.Name(), err)
 		}
@@ -99,14 +100,12 @@ func (a *App) addPlugin(p plugin.Plugin) {
 }
 
 // 配置插件环境
-func (a *App) configurePluginEnv(p plugin.Plugin) *Env {
+func (a *App) configurePluginEnv(p plugin.Plugin) *impl.Env {
 	customConf := a.opt.PluginConf.Plugins[p.Name()]
 	if customConf.Conf == nil {
 		customConf.Conf = make(map[string]any)
 	}
-	if customConf.Other == nil {
-		customConf.Other = make(map[string]any)
-	}
+
 	// 如果不存在插件自定配置启用的群，则使用全局配置
 	if len(customConf.Groups) <= 0 {
 		customConf.Groups = a.opt.PluginConf.Groups
@@ -115,12 +114,12 @@ func (a *App) configurePluginEnv(p plugin.Plugin) *Env {
 	if len(customConf.SuperUsers) <= 0 {
 		customConf.SuperUsers = a.opt.AppConf.Zero.SuperUsers
 	}
-	return NewEnv(p, customConf, a.pluginMp)
+	return impl.NewEnv(p, customConf, a.pluginMp, maps.Clone(a.opt.PluginConf.Other))
 }
 
 func (a *App) PrintPlugins() {
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
-		logrus.Infof("插件 %s | 版本 %s | 描述 %s", p.Name(), version.Version(p.Version()), p.Description())
+		logrus.Infof("插件 %s | 版本 %s ", p.Name(), p.Version())
 	}
 }

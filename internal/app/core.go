@@ -4,20 +4,18 @@ import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/kohmebot/pkg/chain"
-	"github.com/kohmebot/pkg/command"
-	"github.com/kohmebot/pkg/gopool"
-	"github.com/kohmebot/pkg/version"
-	"github.com/kohmebot/plugin"
+	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/extension"
 	"github.com/wdvxdr1123/ZeroBot/message"
+	"golang.org/x/mod/semver"
 	"gorm.io/gorm"
 	"strings"
 	"time"
 )
 
-var v = version.NewVersion(0, 0, 40)
+const coreVersion = "v2.0.0"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -37,7 +35,7 @@ func newCore(a *App) *Core {
 	}
 }
 
-func (c *Core) Init(engine *zero.Engine, env plugin.Env) error {
+func (c *Core) OnInit(engine plugin.Engine, env plugin.Env) error {
 	c.env = env
 	err := env.GetConf(&c.conf)
 	if err != nil {
@@ -68,125 +66,6 @@ func (c *Core) Init(engine *zero.Engine, env plugin.Env) error {
 		return err
 	}
 	return nil
-}
-
-func (c *Core) onHelp(engine *zero.Engine, env plugin.Env) error {
-	g := env.Groups()
-	prefix := c.app.opt.AppConf.Zero.CommandPrefix
-	engine.OnCommandGroup([]string{"help", "?", "？", "帮助"}, g.Rule()).Handle(func(ctx *zero.Ctx) {
-		var msgChain chain.MessageChain
-		msgChain.Split(message.Text(c.conf.HelpTop), message.Text(fmt.Sprintf(`命令前缀 "%s"`, prefix)))
-		msgChain.Line()
-		for _, name := range c.app.pluginNameSeq {
-			pEnv := c.app.envMp[name]
-			// 跳过关闭的插件
-			if pEnv.disable.Load() {
-				continue
-			}
-			p := c.app.pluginMp[name]
-			msgChain.Line(message.Text(fmt.Sprintf("🌟%s (%s)", p.Name(), p.Description())))
-			msgChain.Join(message.Text(p.Commands().String()))
-		}
-		msgChain.Split(message.Text("-----"), message.Text(c.conf.HelpTail))
-		gopool.Go(func() {
-			ctx.Send(msgChain)
-		})
-	})
-	return nil
-}
-
-func (c *Core) onPing(engine *zero.Engine, env plugin.Env) error {
-	supers := env.SuperUser()
-	engine.OnCommand("ping", supers.Rule()).Handle(func(ctx *zero.Ctx) {
-		gopool.Go(func() {
-			ctx.Send(message.Text("pong!我还活着"))
-		})
-	})
-	return nil
-}
-
-func (c *Core) onPlugin(engine *zero.Engine, env plugin.Env) error {
-	supers := env.SuperUser()
-	engine.OnCommand("plugin", supers.Rule()).Handle(func(ctx *zero.Ctx) {
-		var msgChain chain.MessageChain
-		msgChain.Line(message.Text("当前插件列表:"))
-		for _, name := range c.app.pluginNameSeq {
-			p := c.app.pluginMp[name]
-			e := c.app.envMp[name]
-			var toggle string
-			disable := e.disable.Load()
-			if disable {
-				toggle = "关闭"
-			} else {
-				toggle = "开启"
-			}
-			msgChain.Join(message.Text(fmt.Sprintf("%s v%s (%s)", p.Name(), version.Version(p.Version()).String(), toggle)))
-			msgChain.Line()
-		}
-		gopool.Go(func() {
-			ctx.Send(msgChain)
-		})
-	})
-	return nil
-}
-
-func (c *Core) onToggle(engine *zero.Engine, env plugin.Env) error {
-	supers := env.SuperUser()
-	engine.OnCommand("toggle", supers.Rule()).Handle(func(ctx *zero.Ctx) {
-		var cmd extension.CommandModel
-		var err error
-		defer func() {
-			if err != nil {
-				env.Error(ctx, err)
-				return
-			}
-		}()
-		err = ctx.Parse(&cmd)
-		if err != nil {
-			return
-		}
-		pluginName := cmd.Args
-		pluginName = strings.TrimSpace(pluginName)
-		if len(pluginName) <= 0 {
-			err = fmt.Errorf("插件名称为空")
-			return
-		}
-		e, ok := c.app.envMp[pluginName]
-		if !ok {
-			err = fmt.Errorf("插件%s不存在", pluginName)
-			return
-		}
-		var msgChain chain.MessageChain
-		if e.disable.CompareAndSwap(true, false) {
-			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已开启"))
-		} else {
-			e.disable.CompareAndSwap(false, true)
-			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已关闭"))
-		}
-		gopool.Go(func() {
-			ctx.Send(msgChain)
-		})
-
-	})
-	return nil
-}
-
-func (c *Core) Name() string {
-	return "core"
-}
-
-func (c *Core) Description() string {
-	return "基础插件"
-}
-
-func (c *Core) Commands() fmt.Stringer {
-	return command.NewCommands(
-		command.NewCommand("查看帮助", "help", "?", "帮助"),
-	)
-}
-
-func (c *Core) Version() uint64 {
-	return uint64(v)
 }
 
 func (c *Core) OnBoot() {
@@ -227,6 +106,7 @@ func (c *Core) OnBoot() {
 	var updatePlugins []plugin.Plugin
 	initPluginSet.Intersect(historyPluginSet).Each(func(s string) bool {
 		r := historyPluginMp[s]
+
 		if r.Version != c.app.pluginMp[s].Version() {
 			updatePlugins = append(updatePlugins, c.app.pluginMp[s])
 		}
@@ -266,20 +146,20 @@ func (c *Core) OnBoot() {
 		builder.WriteString("已加载插件:\n")
 		for idx, s := range c.app.pluginNameSeq {
 			p := c.app.pluginMp[s]
-			builder.WriteString(fmt.Sprintf("(%d) [%s] v%s\n", idx+1, p.Name(), version.Version(p.Version())))
+			builder.WriteString(fmt.Sprintf("(%d) [%s] v%s\n", idx+1, p.Name(), p.Version()))
 		}
 	}
 	if len(newPlugins) > 0 {
 		builder.WriteString("新插件:\n")
 		for _, p := range newPlugins {
-			builder.WriteString(fmt.Sprintf("[%s] v%s\n", p.Name(), version.Version(p.Version())))
+			builder.WriteString(fmt.Sprintf("[%s] v%s\n", p.Name(), p.Version()))
 		}
 	}
 	if len(deletePlugins) > 0 {
 		builder.WriteString("卸载插件:\n")
 		for _, s := range deletePlugins {
 			r := historyPluginMp[s]
-			builder.WriteString(fmt.Sprintf("[%s] v%s\n", r.Name, version.Version(r.Version)))
+			builder.WriteString(fmt.Sprintf("[%s] v%s\n", r.Name, r.Version))
 		}
 	}
 	if len(updatePlugins) > 0 {
@@ -287,22 +167,161 @@ func (c *Core) OnBoot() {
 		for _, p := range updatePlugins {
 			hp := historyPluginMp[p.Name()]
 			var w string
-			if p.Version() > hp.Version {
+			if semver.Compare(p.Version(), hp.Version) > 0 {
 				w = "版本更新"
 			} else {
 				w = "版本回退"
 			}
-			builder.WriteString(fmt.Sprintf("[%s] %s v%s -> v%s\n", p.Name(), w, version.Version(hp.Version), version.Version(p.Version())))
+			builder.WriteString(fmt.Sprintf("[%s] %s v%s -> v%s\n", p.Name(), w, hp.Version, p.Version()))
 		}
 	}
 	logrus.Info(builder.String())
 	msg := message.Text(builder.String())
-	for ctx := range c.env.RangeBot {
-		for u := range c.env.SuperUser().RangeUser {
-			gopool.Go(func() {
-				ctx.SendPrivateMessage(u, msg)
-			})
-		}
+
+	for u := range c.env.SuperUser().RangeUser() {
+		c.env.GetBot().SendPrivateMessage(u, msg)
 	}
 
+}
+
+func (c *Core) OnHelp(ctx *zero.Ctx) {
+
+	var msg chain.MessageChain
+
+	msg.Split(
+		message.Text("core 插件所有命令"),
+		message.Text("help [插件名称]：查看对应插件帮助"),
+		message.Text("ping：ping一下"),
+		message.Text("plugin：查看所有插件"),
+		message.Text("toggle <插件名称>：切换插件开启状态"),
+	)
+
+	ctx.Send(msg)
+}
+
+func (c *Core) Name() string {
+	return "core"
+}
+
+func (c *Core) Version() string {
+	return coreVersion
+}
+
+func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
+	g := env.Groups()
+	u := env.SuperUser()
+	rule := func(ctx *zero.Ctx) bool {
+		return g.Rule()(ctx) || u.Rule()(ctx)
+	}
+	prefix := c.app.opt.AppConf.Zero.CommandPrefix
+	engine.OnCommandGroup([]string{"help", "?", "？", "帮助"}, rule).Handle(func(ctx *zero.Ctx) {
+		var cmd extension.CommandModel
+		err := ctx.Parse(&cmd)
+		if err != nil {
+			c.env.Error(ctx, err)
+			return
+		}
+		cmd.Args = strings.TrimSpace(cmd.Args)
+		if len(cmd.Args) > 0 {
+			name := strings.Fields(cmd.Args)[0]
+			p, ok := c.app.pluginMp[name]
+			if !ok {
+				c.env.Error(ctx, fmt.Errorf("插件 %s 不存在", name))
+				return
+			}
+			p.OnHelp(ctx)
+			return
+		}
+
+		var msgChain chain.MessageChain
+		msgChain.Split(
+			message.Text(c.conf.HelpTop),
+			message.Text(fmt.Sprintf(`命令前缀 "%s"`, prefix)),
+			message.Text(fmt.Sprintf("使用/help <插件名称> 查看插件详细帮助")),
+		)
+		msgChain.Line()
+		for _, name := range c.app.pluginNameSeq {
+			pEnv := c.app.envMp[name]
+			// 跳过关闭的插件
+			if pEnv.IsDisable() {
+				continue
+			}
+			p := c.app.pluginMp[name]
+			msgChain.Line(message.Text(fmt.Sprintf("🌟%s", p.Name())))
+		}
+		msgChain.Split(message.Text("-----"), message.Text(c.conf.HelpTail))
+		ctx.Send(msgChain)
+	})
+	return nil
+}
+
+func (c *Core) onPing(engine plugin.Engine, env plugin.Env) error {
+	supers := env.SuperUser()
+	engine.OnCommand("ping", supers.Rule()).Handle(func(ctx *zero.Ctx) {
+		ctx.Send(message.Text("pong!我还活着"))
+	})
+	return nil
+}
+
+func (c *Core) onPlugin(engine plugin.Engine, env plugin.Env) error {
+	supers := env.SuperUser()
+	engine.OnCommand("plugin", supers.Rule()).Handle(func(ctx *zero.Ctx) {
+		var msgChain chain.MessageChain
+		msgChain.Line(message.Text("当前插件列表:"))
+		for _, name := range c.app.pluginNameSeq {
+			p := c.app.pluginMp[name]
+			e := c.app.envMp[name]
+			var toggle string
+			disable := e.IsDisable()
+			if disable {
+				toggle = "关闭"
+			} else {
+				toggle = "开启"
+			}
+			msgChain.Join(message.Text(fmt.Sprintf("%s v%s (%s)", p.Name(), p.Version(), toggle)))
+			msgChain.Line()
+		}
+		ctx.Send(msgChain)
+	})
+	return nil
+}
+
+func (c *Core) onToggle(engine plugin.Engine, env plugin.Env) error {
+	supers := env.SuperUser()
+	engine.OnCommand("toggle", supers.Rule()).Handle(func(ctx *zero.Ctx) {
+		var cmd extension.CommandModel
+		var err error
+		defer func() {
+			if err != nil {
+				env.Error(ctx, err)
+				return
+			}
+		}()
+		err = ctx.Parse(&cmd)
+		if err != nil {
+			return
+		}
+		pluginName := cmd.Args
+		pluginName = strings.TrimSpace(pluginName)
+		if len(pluginName) <= 0 {
+			err = fmt.Errorf("插件名称为空")
+			return
+		}
+		e, ok := c.app.envMp[pluginName]
+		if !ok {
+			err = fmt.Errorf("插件%s不存在", pluginName)
+			return
+		}
+		var msgChain chain.MessageChain
+
+		if e.Disable.CompareAndSwap(true, false) {
+			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已开启"))
+		} else {
+			e.Disable.CompareAndSwap(false, true)
+			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已关闭"))
+		}
+		ctx.Send(msgChain)
+
+	})
+	return nil
 }
