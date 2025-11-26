@@ -209,14 +209,18 @@ func (c *Core) Version() string {
 	return coreVersion
 }
 
-func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
+func (c *Core) getEnvRule(env plugin.Env) zero.Rule {
 	g := env.Groups()
 	u := env.SuperUser()
-	rule := func(ctx *zero.Ctx) bool {
+	return func(ctx *zero.Ctx) bool {
 		return g.Rule()(ctx) || u.Rule()(ctx)
 	}
+}
+
+func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
+
 	prefix := c.app.opt.AppConf.Zero.CommandPrefix
-	engine.OnCommandGroup([]string{"help", "?", "？", "帮助"}, rule).Handle(func(ctx *zero.Ctx) {
+	engine.OnCommandGroup([]string{"help", "?", "？", "帮助"}, c.getEnvRule(env)).Handle(func(ctx *zero.Ctx) {
 		var cmd extension.CommandModel
 		err := ctx.Parse(&cmd)
 		if err != nil {
@@ -231,7 +235,11 @@ func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
 				c.env.Error(ctx, fmt.Errorf("插件 %s 不存在", name))
 				return
 			}
-			if c.app.envMp[name].IsDisable() {
+			pEnv := c.app.envMp[name]
+			if pEnv.IsDisable() {
+				return
+			}
+			if !c.getEnvRule(pEnv)(ctx) {
 				return
 			}
 			p.OnHelp(ctx)
@@ -251,6 +259,11 @@ func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
 			if pEnv.IsDisable() {
 				continue
 			}
+			// 跳过未启用群的插件
+			if !c.getEnvRule(pEnv)(ctx) {
+				continue
+			}
+
 			p := c.app.pluginMp[name]
 			msgChain.Line(message.Text(fmt.Sprintf("🌟%s", p.Name())))
 		}
