@@ -178,9 +178,11 @@ func (c *Core) OnBoot() {
 	logrus.Info(builder.String())
 	msg := message.Text(builder.String())
 
-	for u := range c.env.SuperUser().RangeUser() {
-		c.env.GetBot().SendPrivateMessage(u, msg)
-	}
+	c.env.UseBot(func(ctx *zero.Ctx) {
+		for u := range c.env.SuperUser().RangeUser() {
+			ctx.SendPrivateMessage(u, msg)
+		}
+	})
 
 }
 
@@ -229,6 +231,9 @@ func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
 				c.env.Error(ctx, fmt.Errorf("插件 %s 不存在", name))
 				return
 			}
+			if c.app.envMp[name].IsDisable() {
+				return
+			}
 			p.OnHelp(ctx)
 			return
 		}
@@ -237,7 +242,7 @@ func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
 		msgChain.Split(
 			message.Text(c.conf.HelpTop),
 			message.Text(fmt.Sprintf(`命令前缀 "%s"`, prefix)),
-			message.Text(fmt.Sprintf("使用/help <插件名称> 查看插件详细帮助")),
+			message.Text(fmt.Sprintf("使用/help [插件名称] 查看插件详细帮助")),
 		)
 		msgChain.Line()
 		for _, name := range c.app.pluginNameSeq {

@@ -5,7 +5,7 @@ go 1.23.1
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/kohmebot/pkg v1.0.2
-	github.com/kohmebot/plugin/v2 v2.0.0
+	github.com/kohmebot/plugin/v2 v2.0.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/wdvxdr1123/ZeroBot v1.8.1
 	golang.org/x/mod v0.25.0

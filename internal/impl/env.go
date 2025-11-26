@@ -104,13 +104,14 @@ func (e *Env) FilePath() (string, error) {
 	return path, err
 }
 
-func (e *Env) GetBot() *zero.Ctx {
-	var c *zero.Ctx
+func (e *Env) UseBot(h zero.Handler) {
+	if e.IsDisable() {
+		return
+	}
 	zero.RangeBot(func(id int64, ctx *zero.Ctx) bool {
-		c = ctx
+		h(ctx)
 		return false
 	})
-	return c
 }
 
 func (e *Env) GetConf(conf any) error {
