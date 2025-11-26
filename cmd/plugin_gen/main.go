@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/pkg/conf"
+	"golang.org/x/mod/semver"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -80,14 +81,22 @@ func gen(plugins conf.PluginConfMap) error {
 			continue
 		}
 
+		if semver.Compare(c.Version, "v2.0.0") >= 0 {
+			// v2或以上版本
+			major := semver.Major(c.Version)
+			_, last := path.Split(c.Repo)
+			if last != major {
+				c.Repo = path.Join(c.Repo, major)
+			}
+		}
 		importBuilder.WriteString(fmt.Sprintf(`import "%s"`, path.Join(c.Repo, name)))
 		importBuilder.WriteByte('\n')
 		newBuilder.WriteString(fmt.Sprintf("register(%s.NewPlugin)\n", name))
-		strings.TrimPrefix(c.Version, "v")
+
 		if len(c.Version) <= 0 {
 			getUrl = append(getUrl, fmt.Sprintf("%s@latest", c.Repo))
 		} else {
-			getUrl = append(getUrl, fmt.Sprintf("%s@v%s", c.Repo, c.Version))
+			getUrl = append(getUrl, fmt.Sprintf("%s@%s", c.Repo, c.Version))
 		}
 
 	}

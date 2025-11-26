@@ -61,8 +61,8 @@ type PluginConf struct {
 	Path    string        `yaml:"path"`
 	Plugins PluginConfMap `yaml:"plugins"`
 	Groups  []int64       `yaml:"groups"`
-	// 其他不定字段,作为环境变量传入
-	Other map[string]any `yaml:",inline"`
+	// 环境变量
+	Other map[string]any `yaml:"env"`
 }
 
 func (c *PluginConf) ParseYamlFile(path string) error {
