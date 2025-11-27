@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.0.1"
+const coreVersion = "v1.0.11"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -146,20 +146,20 @@ func (c *Core) OnBoot() {
 		builder.WriteString("已加载插件:\n")
 		for idx, s := range c.app.pluginNameSeq {
 			p := c.app.pluginMp[s]
-			builder.WriteString(fmt.Sprintf("(%d) [%s] v%s\n", idx+1, p.Name(), p.Version()))
+			builder.WriteString(fmt.Sprintf("(%d) [%s] %s\n", idx+1, p.Name(), p.Version()))
 		}
 	}
 	if len(newPlugins) > 0 {
 		builder.WriteString("新插件:\n")
 		for _, p := range newPlugins {
-			builder.WriteString(fmt.Sprintf("[%s] v%s\n", p.Name(), p.Version()))
+			builder.WriteString(fmt.Sprintf("[%s] %s\n", p.Name(), p.Version()))
 		}
 	}
 	if len(deletePlugins) > 0 {
 		builder.WriteString("卸载插件:\n")
 		for _, s := range deletePlugins {
 			r := historyPluginMp[s]
-			builder.WriteString(fmt.Sprintf("[%s] v%s\n", r.Name, r.Version))
+			builder.WriteString(fmt.Sprintf("[%s] %s\n", r.Name, r.Version))
 		}
 	}
 	if len(updatePlugins) > 0 {
@@ -172,7 +172,7 @@ func (c *Core) OnBoot() {
 			} else {
 				w = "版本回退"
 			}
-			builder.WriteString(fmt.Sprintf("[%s] %s v%s -> v%s\n", p.Name(), w, hp.Version, p.Version()))
+			builder.WriteString(fmt.Sprintf("[%s] %s %s -> %s\n", p.Name(), w, hp.Version, p.Version()))
 		}
 	}
 	logrus.Info(builder.String())
@@ -325,6 +325,12 @@ func (c *Core) onToggle(engine plugin.Engine, env plugin.Env) error {
 			err = fmt.Errorf("插件名称为空")
 			return
 		}
+
+		if pluginName == "core" {
+			err = fmt.Errorf("无法关闭core")
+			return
+		}
+
 		e, ok := c.app.envMp[pluginName]
 		if !ok {
 			err = fmt.Errorf("插件%s不存在", pluginName)
