@@ -41,7 +41,7 @@ jobs:
           EOF
 
           go mod tidy
-          go build -o get-version version.go
+          go build -o get-version ./cmd/version/version.go
           VERSION=$(./get-version 2>/dev/null)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION"
