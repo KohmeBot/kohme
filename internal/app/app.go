@@ -44,7 +44,7 @@ func (a *App) Start() error {
 	if err != nil {
 		return err
 	}
-	a.RegisterPlugins(newCore(a))
+	a.RegisterCore()
 	a.RegisterPlugins(append(a.opt.DefaultPlugins, ps...)...)
 
 	for _, name := range a.pluginNameSeq {
@@ -62,6 +62,11 @@ func (a *App) Start() error {
 	})
 	return nil
 
+}
+
+// RegisterCore 注册核心插件
+func (a *App) RegisterCore() {
+	a.RegisterPlugins(newCore(a))
 }
 
 // RegisterPlugins 注册插件
@@ -122,4 +127,8 @@ func (a *App) PrintPlugins() {
 		p := a.pluginMp[name]
 		logrus.Infof("插件 %s | 版本 %s ", p.Name(), p.Version())
 	}
+}
+
+func (a *App) GetPlugin(name string) plugin.Plugin {
+	return a.pluginMp[name]
 }
