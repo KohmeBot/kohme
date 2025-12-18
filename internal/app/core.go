@@ -4,6 +4,7 @@ import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/kohmebot/pkg/chain"
+	"github.com/kohmebot/pkg/command"
 	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.0.11"
+const coreVersion = "v1.0.12"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -188,17 +189,40 @@ func (c *Core) OnBoot() {
 
 func (c *Core) OnHelp(ctx *zero.Ctx) {
 
-	var msg chain.MessageChain
+	help := command.HelpTemplate{
+		PluginName: "core",
+		PluginDesc: "kohme 核心插件",
+		Commands: []command.Command{
+			{
+				CMD: "help",
+				Args: []command.Arg{
+					{
+						Name: "插件名称",
+					},
+				},
+				Desc: "查看对应插件帮助",
+			},
+			{
+				CMD:  "ping",
+				Desc: "ping一下",
+			},
+			{
+				CMD:  "plugin",
+				Desc: "查看所有插件",
+			},
+			{
+				CMD: "toggle",
+				Args: []command.Arg{
+					{
+						Name: "插件名称",
+					},
+				},
+				Desc: "开启/关闭插件",
+			},
+		},
+	}
 
-	msg.Split(
-		message.Text("core 插件所有命令"),
-		message.Text("help [插件名称]：查看对应插件帮助"),
-		message.Text("ping：ping一下"),
-		message.Text("plugin：查看所有插件"),
-		message.Text("toggle <插件名称>：切换插件开启状态"),
-	)
-
-	ctx.Send(msg)
+	ctx.Send(help.String())
 }
 
 func (c *Core) Name() string {
@@ -296,7 +320,7 @@ func (c *Core) onPlugin(engine plugin.Engine, env plugin.Env) error {
 			} else {
 				toggle = "开启"
 			}
-			msgChain.Join(message.Text(fmt.Sprintf("%s v%s (%s)", p.Name(), p.Version(), toggle)))
+			msgChain.Join(message.Text(fmt.Sprintf("%s %s (%s)", p.Name(), p.Version(), toggle)))
 			msgChain.Line()
 		}
 		ctx.Send(msgChain)
