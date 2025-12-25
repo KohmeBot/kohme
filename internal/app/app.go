@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"maps"
+	"time"
 )
 
 type App struct {
@@ -47,17 +48,26 @@ func (a *App) Start() error {
 	a.RegisterCore()
 	a.RegisterPlugins(append(a.opt.DefaultPlugins, ps...)...)
 
+	bootDuration := make(map[string]time.Duration)
+
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
+		start := time.Now()
 		err = p.OnInit(impl.NewEngine(a.envMp[p.Name()], a.Engine), a.envMp[p.Name()])
 		if err != nil {
 			return fmt.Errorf("%s 初始化失败: %w", p.Name(), err)
 		}
+		bootDuration[name] += time.Since(start)
 	}
 	a.PrintPlugins()
 	zero.RunAndBlock(&a.opt.AppConf.Zero, func() {
 		for _, name := range a.pluginNameSeq {
+			start := time.Now()
 			a.pluginMp[name].OnBoot()
+			bootDuration[name] += time.Since(start)
+		}
+		for name, dur := range bootDuration {
+			a.envMp[name].Metric.SetBootDuration(dur)
 		}
 	})
 	return nil

@@ -1,9 +1,12 @@
 package impl
 
 import (
+	"cmp"
 	"fmt"
+	"github.com/jhue58/latency/duration"
 	"github.com/kohmebot/kohme/internal/db"
 	"github.com/kohmebot/kohme/pkg/conf"
+	"github.com/kohmebot/kohme/pkg/metric"
 	"github.com/kohmebot/pkg/chain"
 	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
@@ -11,9 +14,17 @@ import (
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync/atomic"
+	"time"
+)
+
+const (
+	EnvMetric = "ENV_METRIC_%s"
 )
 
 type Env struct {
@@ -24,6 +35,7 @@ type Env struct {
 	superUser    Users
 	group        *GroupsWithEnv
 	envs         map[string]any
+	Metric       *metric.Metric
 }
 
 func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[string]plugin.Plugin, envs map[string]any) *Env {
@@ -32,6 +44,7 @@ func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[
 		customConf:   customConf,
 		otherPlugins: otherPlugins,
 		envs:         envs,
+		Metric:       metric.NewMetric(p.Name()),
 	}
 	e.Disable.Store(customConf.Disable)
 	e.superUser = customConf.SuperUsers
@@ -146,4 +159,37 @@ func (e *Env) IsDisable() bool {
 
 func (e *Env) Toggle(b bool) {
 	e.Disable.Store(!b)
+}
+
+func (e *Env) MetricReport() string {
+	snaps := e.Metric.Snapshot()
+	commands := slices.SortedFunc(maps.Keys(snaps), func(a string, b string) int {
+		if len(a) != len(b) {
+			return cmp.Compare(len(a), len(b))
+		}
+		return strings.Compare(a, b)
+	})
+
+	var b strings.Builder
+	runDur := duration.NewDuration(time.Since(e.Metric.StartTime))
+	runDur.ToBestUnit()
+	bootDur := e.Metric.BootDuration
+	bootDur.ToBestUnit()
+	b.WriteString(fmt.Sprintf("%s已运行: %s\n", e.p.Name(), runDur.String()))
+	b.WriteString(fmt.Sprintf("插件加载时间: %s\n", bootDur.String()))
+	if len(commands) > 0 {
+		b.WriteString(fmt.Sprintf("指令执行时间:\n"))
+	}
+	for _, command := range commands {
+		snap := snaps[command]
+		count := snap.Count()
+		maxx := snap.Max()
+		avg := snap.Mean()
+		p50 := snap.Percentile(50)
+		p99 := snap.Percentile(99)
+		b.WriteString(fmt.Sprintf("[%s]count:%d,max:%s,avg:%s,p50:%s,p99:%s\n", command, count, maxx.String(), avg.String(), p50.String(), p99.String()))
+	}
+
+	return strings.TrimRight(b.String(), "\n")
+
 }

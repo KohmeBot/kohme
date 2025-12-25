@@ -17,6 +17,7 @@ require (
 require (
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d // indirect
 	github.com/RomiChan/websocket v1.4.3-0.20220227141055-9b2c6168c9c5 // indirect
+	github.com/jhue58/latency v0.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
