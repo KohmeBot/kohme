@@ -1,6 +1,8 @@
 package impl
 
-import zero "github.com/wdvxdr1123/ZeroBot"
+import (
+	zero "github.com/wdvxdr1123/ZeroBot"
+)
 
 type EnvEngine struct {
 	env *Env
@@ -62,7 +64,9 @@ func (e *EnvEngine) UseMidHandler(rules ...zero.Rule) {
 }
 
 func (e *EnvEngine) UsePostHandler(handler ...zero.Handler) {
-	e.e.UsePostHandler(e.wrapEnableHandler(handler))
+	e.e.UsePostHandler(e.wrapEnableHandler(handler), func(ctx *zero.Ctx) {
+		e.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
+	})
 }
 
 func (e *EnvEngine) On(typ string, rules ...zero.Rule) *zero.Matcher {
@@ -94,7 +98,11 @@ func (e *EnvEngine) OnSuffix(suffix string, rules ...zero.Rule) *zero.Matcher {
 }
 
 func (e *EnvEngine) OnCommand(commands string, rules ...zero.Rule) *zero.Matcher {
-	return e.e.OnCommand(commands, e.withEnableRule(rules))
+	command := commands
+	return e.e.OnCommand(commands, e.withEnableRule(rules), func(ctx *zero.Ctx) bool {
+		e.env.Metric.CommandStart(string(ctx.Event.RawMessageID), command)
+		return true
+	})
 }
 
 func (e *EnvEngine) OnRegex(regexPattern string, rules ...zero.Rule) *zero.Matcher {
@@ -118,7 +126,16 @@ func (e *EnvEngine) OnKeywordGroup(keywords []string, rules ...zero.Rule) *zero.
 }
 
 func (e *EnvEngine) OnCommandGroup(commands []string, rules ...zero.Rule) *zero.Matcher {
-	return e.e.OnCommandGroup(commands, e.withEnableRule(rules))
+	var command string
+	for _, c := range commands {
+		command = c
+		e.env.Metric.CommandInit(command)
+		break
+	}
+	return e.e.OnCommandGroup(commands, e.withEnableRule(rules), func(ctx *zero.Ctx) bool {
+		e.env.Metric.CommandStart(string(ctx.Event.RawMessageID), command)
+		return true
+	})
 }
 
 func (e *EnvEngine) OnPrefixGroup(prefix []string, rules ...zero.Rule) *zero.Matcher {

@@ -12,11 +12,12 @@ import (
 	"github.com/wdvxdr1123/ZeroBot/message"
 	"golang.org/x/mod/semver"
 	"gorm.io/gorm"
+	"runtime"
 	"strings"
 	"time"
 )
 
-const coreVersion = "v1.0.12"
+const coreVersion = "v1.0.2"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -63,6 +64,10 @@ func (c *Core) OnInit(engine plugin.Engine, env plugin.Env) error {
 		return err
 	}
 	err = c.onToggle(engine, env)
+	if err != nil {
+		return err
+	}
+	err = c.onMetric(engine, env)
 	if err != nil {
 		return err
 	}
@@ -219,6 +224,16 @@ func (c *Core) OnHelp(ctx *zero.Ctx) {
 				},
 				Desc: "开启/关闭插件",
 			},
+			{
+				CMD: "metric",
+				Args: []command.Arg{
+					{
+						Name:     "插件名称",
+						Optional: true,
+					},
+				},
+				Desc: "查看性能指标",
+			},
 		},
 	}
 
@@ -293,7 +308,7 @@ func (c *Core) onHelp(engine plugin.Engine, env plugin.Env) error {
 		}
 		msgChain.Split(message.Text("-----"), message.Text(c.conf.HelpTail))
 		ctx.Send(msgChain)
-	})
+	}).SetBlock(true)
 	return nil
 }
 
@@ -301,7 +316,7 @@ func (c *Core) onPing(engine plugin.Engine, env plugin.Env) error {
 	supers := env.SuperUser()
 	engine.OnCommand("ping", supers.Rule()).Handle(func(ctx *zero.Ctx) {
 		ctx.Send(message.Text("pong!我还活着"))
-	})
+	}).SetBlock(true)
 	return nil
 }
 
@@ -324,7 +339,7 @@ func (c *Core) onPlugin(engine plugin.Engine, env plugin.Env) error {
 			msgChain.Line()
 		}
 		ctx.Send(msgChain)
-	})
+	}).SetBlock(true)
 	return nil
 }
 
@@ -363,13 +378,59 @@ func (c *Core) onToggle(engine plugin.Engine, env plugin.Env) error {
 		var msgChain chain.MessageChain
 
 		if e.Disable.CompareAndSwap(true, false) {
+			e.Metric.Start()
 			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已开启"))
 		} else {
+			e.Metric.Cleanup()
 			e.Disable.CompareAndSwap(false, true)
 			msgChain.SplitEmpty(message.Text(pluginName), message.Text("已关闭"))
 		}
 		ctx.Send(msgChain)
 
-	})
+	}).SetBlock(true)
+	return nil
+}
+
+func (c *Core) onMetric(engine plugin.Engine, env plugin.Env) error {
+	supers := env.SuperUser()
+	engine.OnCommand("metric", supers.Rule()).Handle(func(ctx *zero.Ctx) {
+		var cmd extension.CommandModel
+		err := ctx.Parse(&cmd)
+		if err != nil {
+			c.env.Error(ctx, err)
+			return
+		}
+		cmd.Args = strings.TrimSpace(cmd.Args)
+		if len(cmd.Args) <= 0 {
+			cmd.Args = c.Name()
+		}
+		name := strings.Fields(cmd.Args)[0]
+		_, ok := c.app.pluginMp[name]
+		if !ok {
+			c.env.Error(ctx, fmt.Errorf("插件 %s 不存在", name))
+			return
+		}
+		pEnv := c.app.envMp[name]
+		if pEnv.IsDisable() {
+			return
+		}
+		if !c.getEnvRule(pEnv)(ctx) {
+			return
+		}
+
+		var msgChain chain.MessageChain
+
+		if name == c.Name() {
+			// core
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			msgChain.Line(message.Text(fmt.Sprintf("kohme占用内存: %.4fMB", float64(m.HeapAlloc)/1024/1024)))
+		}
+
+		msgChain.Line(message.Text(pEnv.MetricReport()))
+
+		ctx.Send(msgChain)
+
+	}).SetBlock(true)
 	return nil
 }
