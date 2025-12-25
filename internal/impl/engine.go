@@ -10,10 +10,15 @@ type EnvEngine struct {
 }
 
 func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
-	return &EnvEngine{
+	eng := &EnvEngine{
 		env: env,
 		e:   e,
 	}
+
+	eng.UsePostHandler(func(ctx *zero.Ctx) {
+		eng.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
+	})
+	return eng
 }
 
 func (e *EnvEngine) withEnableRule(rules []zero.Rule) zero.Rule {
@@ -64,9 +69,7 @@ func (e *EnvEngine) UseMidHandler(rules ...zero.Rule) {
 }
 
 func (e *EnvEngine) UsePostHandler(handler ...zero.Handler) {
-	e.e.UsePostHandler(e.wrapEnableHandler(handler), func(ctx *zero.Ctx) {
-		e.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
-	})
+	e.e.UsePostHandler(e.wrapEnableHandler(handler))
 }
 
 func (e *EnvEngine) On(typ string, rules ...zero.Rule) *zero.Matcher {
@@ -98,9 +101,9 @@ func (e *EnvEngine) OnSuffix(suffix string, rules ...zero.Rule) *zero.Matcher {
 }
 
 func (e *EnvEngine) OnCommand(commands string, rules ...zero.Rule) *zero.Matcher {
-	command := commands
+	e.env.Metric.CommandInit(commands)
 	return e.e.OnCommand(commands, e.withEnableRule(rules), func(ctx *zero.Ctx) bool {
-		e.env.Metric.CommandStart(string(ctx.Event.RawMessageID), command)
+		e.env.Metric.CommandStart(string(ctx.Event.RawMessageID), commands)
 		return true
 	})
 }

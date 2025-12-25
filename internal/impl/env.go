@@ -172,8 +172,11 @@ func (e *Env) MetricReport() string {
 
 	var b strings.Builder
 	runDur := duration.NewDuration(time.Since(e.Metric.StartTime))
+	runDur.ToBestUnit()
+	bootDur := e.Metric.BootDuration
+	bootDur.ToBestUnit()
 	b.WriteString(fmt.Sprintf("%s已运行: %s\n", e.p.Name(), runDur.String()))
-	b.WriteString(fmt.Sprintf("插件加载时间: %s\n", e.Metric.BootDuration.String()))
+	b.WriteString(fmt.Sprintf("插件加载时间: %s\n", bootDur.String()))
 	if len(commands) > 0 {
 		b.WriteString(fmt.Sprintf("指令执行时间:\n"))
 	}

@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.0.2"
+const coreVersion = "v1.1.0"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
