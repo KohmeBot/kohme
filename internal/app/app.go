@@ -3,11 +3,13 @@ package app
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/impl"
+	"github.com/kohmebot/kohme/pkg/conf"
 	fplugin "github.com/kohmebot/kohme/pkg/plugin"
 	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"maps"
+	"sync"
 	"time"
 )
 
@@ -21,6 +23,8 @@ type App struct {
 	// 插件名称序列，这个表明了加载顺序
 	pluginNameSeq []string
 	envMp         map[string]*impl.Env
+
+	gate sync.RWMutex
 }
 
 func New(opts ...Option) *App {
@@ -49,7 +53,11 @@ func (a *App) Start() error {
 	a.RegisterPlugins(append(a.opt.DefaultPlugins, ps...)...)
 
 	bootDuration := make(map[string]time.Duration)
-
+	// 确保在所有PreHandler之前
+	a.Engine.UsePreHandler(func(ctx *zero.Ctx) bool {
+		a.gate.RLock()
+		return true
+	})
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
 		start := time.Now()
@@ -66,6 +74,11 @@ func (a *App) Start() error {
 			a.pluginMp[name].OnBoot()
 			bootDuration[name] += time.Since(start)
 		}
+		// 确保在所有PostHandler之后
+		a.Engine.UsePostHandler(func(ctx *zero.Ctx) {
+			a.gate.RUnlock()
+		})
+
 		for name, dur := range bootDuration {
 			a.envMp[name].Metric.SetBootDuration(dur)
 		}
@@ -109,9 +122,21 @@ func (a *App) addPlugin(p plugin.Plugin) {
 	// 插件注册
 	a.pluginMp[p.Name()] = p
 	a.pluginNameSeq = append(a.pluginNameSeq, p.Name())
-
 	// 配置插件环境
-	a.envMp[p.Name()] = a.configurePluginEnv(p)
+	a.setPluginEnv(p)
+
+}
+
+func (a *App) setPluginEnv(p plugin.Plugin) {
+	env := a.configurePluginEnv(p)
+	e, ok := a.envMp[p.Name()]
+	if ok {
+		// 直接替换值
+		// 确保所有指针持有者能得到相同的改动
+		*e = *env
+	} else {
+		a.envMp[p.Name()] = env
+	}
 }
 
 // 配置插件环境
@@ -141,4 +166,22 @@ func (a *App) PrintPlugins() {
 
 func (a *App) GetPlugin(name string) plugin.Plugin {
 	return a.pluginMp[name]
+}
+
+func (a *App) ReloadPluginConf() error {
+
+	pluginConf := conf.PluginConf{}
+	err := pluginConf.ParseYamlFile(conf.PluginConfigPath)
+	if err != nil {
+		return err
+	}
+
+	a.gate.Lock()
+	defer a.gate.Unlock()
+	WithPluginConf(pluginConf)(&a.opt)
+	for _, p := range a.pluginMp {
+		a.setPluginEnv(p)
+	}
+
+	return nil
 }

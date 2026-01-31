@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.0"
+const coreVersion = "v1.2.0"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -68,6 +68,10 @@ func (c *Core) OnInit(engine plugin.Engine, env plugin.Env) error {
 		return err
 	}
 	err = c.onMetric(engine, env)
+	if err != nil {
+		return err
+	}
+	err = c.onReConfig(engine, env)
 	if err != nil {
 		return err
 	}
@@ -233,6 +237,10 @@ func (c *Core) OnHelp(ctx *zero.Ctx) {
 					},
 				},
 				Desc: "查看性能指标",
+			},
+			{
+				CMD:  "reconfig",
+				Desc: "重新加载配置",
 			},
 		},
 	}
@@ -430,6 +438,27 @@ func (c *Core) onMetric(engine plugin.Engine, env plugin.Env) error {
 		msgChain.Line(message.Text(pEnv.MetricReport()))
 
 		ctx.Send(msgChain)
+
+	}).SetBlock(true)
+	return nil
+}
+
+func (c *Core) onReConfig(engine plugin.Engine, env plugin.Env) error {
+	engine.OnCommand("reconfig", env.SuperUser().Rule()).Handle(func(ctx *zero.Ctx) {
+
+		// 在重载配置时，会对这个全局的锁加写锁
+		// 因为core本身也是一个插件，在执行这个命令的时候已经加了读锁
+		// 若不释放，则会造成死锁
+		c.app.gate.RUnlock()
+		// 最后加回读锁
+		defer c.app.gate.RLock()
+
+		err := c.app.ReloadPluginConf()
+		if err != nil {
+			env.Error(ctx, err)
+			return
+		}
+		ctx.Send(message.Text("配置重载成功"))
 
 	}).SetBlock(true)
 	return nil
