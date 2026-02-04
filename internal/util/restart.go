@@ -1,11 +1,19 @@
 package util
 
 import (
+	"fmt"
 	"os"
-	"os/exec"
+	"runtime"
+	"syscall"
 )
 
 func Restart() (exit func(), err error) {
+	if runtime.GOOS == "windows" {
+		return func() {
+			os.Exit(1)
+		}, fmt.Errorf("unsupport windows")
+	}
+
 	exe, err := os.Executable()
 	if err != nil {
 		return func() {
@@ -13,12 +21,7 @@ func Restart() (exit func(), err error) {
 		}, err
 	}
 
-	cmd := exec.Command(exe, os.Args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
 	return func() {
 		os.Exit(0)
-	}, cmd.Start()
+	}, syscall.Exec(exe, os.Args, os.Environ())
 }
