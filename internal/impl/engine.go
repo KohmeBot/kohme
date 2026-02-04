@@ -2,11 +2,13 @@ package impl
 
 import (
 	zero "github.com/wdvxdr1123/ZeroBot"
+	"sync"
 )
 
 type EnvEngine struct {
 	env *Env
 	e   *zero.Engine
+	wg  sync.WaitGroup
 }
 
 func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
@@ -14,6 +16,14 @@ func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
 		env: env,
 		e:   e,
 	}
+	eng.UsePreHandler(func(ctx *zero.Ctx) bool {
+		if eng.env.Disable.Load() {
+			// disable
+			return false
+		}
+		eng.wg.Add(1)
+		return true
+	})
 	eng.UsePostHandler(func(ctx *zero.Ctx) {
 		eng.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
 	})
@@ -22,11 +32,9 @@ func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
 
 func (e *EnvEngine) withEnableRule(rules []zero.Rule) zero.Rule {
 	return func(ctx *zero.Ctx) bool {
-		if e.env.IsDisable() {
-			return false
-		}
 		for _, rule := range rules {
 			if !rule(ctx) {
+				e.wg.Done()
 				return false
 			}
 		}
@@ -36,11 +44,9 @@ func (e *EnvEngine) withEnableRule(rules []zero.Rule) zero.Rule {
 
 func (e *EnvEngine) wrapEnableRule(rules []zero.Rule) zero.Rule {
 	return func(ctx *zero.Ctx) bool {
-		if e.env.IsDisable() {
-			return true
-		}
 		for _, rule := range rules {
 			if !rule(ctx) {
+				e.wg.Done()
 				return false
 			}
 		}
@@ -50,12 +56,10 @@ func (e *EnvEngine) wrapEnableRule(rules []zero.Rule) zero.Rule {
 
 func (e *EnvEngine) wrapEnableHandler(handler []zero.Handler) zero.Handler {
 	return func(ctx *zero.Ctx) {
-		if e.env.IsDisable() {
-			return
-		}
 		for _, h := range handler {
 			h(ctx)
 		}
+		e.wg.Done()
 	}
 }
 
@@ -150,4 +154,7 @@ func (e *EnvEngine) OnSuffixGroup(suffix []string, rules ...zero.Rule) *zero.Mat
 
 func (e *EnvEngine) OnShell(command string, model interface{}, rules ...zero.Rule) *zero.Matcher {
 	return e.e.OnShell(command, model, e.withEnableRule(rules))
+}
+func (e *EnvEngine) WaitDone() {
+	e.wg.Wait()
 }

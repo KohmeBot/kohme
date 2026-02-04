@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"maps"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -23,9 +22,9 @@ type App struct {
 	// 插件名称序列，这个表明了加载顺序
 	pluginNameSeq []string
 	envMp         map[string]*impl.Env
+	engineMp      map[string]*impl.EnvEngine
 
 	closing atomic.Bool
-	wg      sync.WaitGroup
 }
 
 func New(opts ...Option) *App {
@@ -40,6 +39,7 @@ func New(opts ...Option) *App {
 		manager:  fplugin.NewPluginManager(defaultOpt.PluginConf.Path),
 		pluginMp: make(map[string]plugin.Plugin),
 		envMp:    make(map[string]*impl.Env),
+		engineMp: make(map[string]*impl.EnvEngine),
 	}
 
 	return a
@@ -60,24 +60,20 @@ func (a *App) Start() error {
 		if a.closing.Load() {
 			return false
 		}
-		a.wg.Add(1)
 		return true
 	})
 
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
 		start := time.Now()
-		err = p.OnInit(impl.NewEngine(a.envMp[p.Name()], a.Engine), a.envMp[p.Name()])
+		eng := impl.NewEngine(a.envMp[p.Name()], a.Engine)
+		a.engineMp[name] = eng
+		err = p.OnInit(eng, a.envMp[p.Name()])
 		if err != nil {
 			return fmt.Errorf("%s 初始化失败: %w", p.Name(), err)
 		}
 		bootDuration[name] += time.Since(start)
 	}
-
-	// 确保在所有PostHandler后
-	a.Engine.UsePostHandler(func(ctx *zero.Ctx) {
-		a.wg.Done()
-	})
 
 	a.PrintPlugins()
 	zero.RunAndBlock(&a.opt.AppConf.Zero, func() {

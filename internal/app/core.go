@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.2"
+const coreVersion = "v1.1.21"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -440,11 +440,15 @@ func (c *Core) onRestart(engine plugin.Engine, env plugin.Env) error {
 		c.app.closing.Store(true)
 		ch := make(chan struct{})
 		go func() {
-			c.app.wg.Wait()
+			for name, eng := range c.app.engineMp {
+				if name == "core" {
+					continue
+				}
+				eng.WaitDone()
+			}
 			close(ch)
 		}()
 		ctx.Send("正在等待所有插件处理完成...")
-		c.app.wg.Done()
 		var text string
 		select {
 		case <-ch:
@@ -458,7 +462,6 @@ func (c *Core) onRestart(engine plugin.Engine, env plugin.Env) error {
 		exit, err := util.Restart()
 		if err != nil {
 			env.Error(ctx, fmt.Errorf("重启失败,请尝试手动重启: %w", err))
-			c.app.wg.Add(1)
 			c.app.closing.Store(false)
 			return
 		}
