@@ -31,7 +31,7 @@ type Env struct {
 	customConf   conf.CustomPluginConf
 	p            plugin.Plugin
 	otherPlugins map[string]plugin.Plugin
-	Disable      *atomic.Bool
+	Disable      atomic.Bool
 	superUser    Users
 	group        *GroupsWithEnv
 	envs         map[string]any
@@ -45,7 +45,6 @@ func NewEnv(p plugin.Plugin, customConf conf.CustomPluginConf, otherPlugins map[
 		otherPlugins: otherPlugins,
 		envs:         envs,
 		Metric:       metric.NewMetric(p.Name()),
-		Disable:      &atomic.Bool{},
 	}
 	e.Disable.Store(customConf.Disable)
 	e.superUser = customConf.SuperUsers
