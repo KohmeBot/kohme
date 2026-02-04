@@ -14,7 +14,6 @@ func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
 		env: env,
 		e:   e,
 	}
-
 	eng.UsePostHandler(func(ctx *zero.Ctx) {
 		eng.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
 	})

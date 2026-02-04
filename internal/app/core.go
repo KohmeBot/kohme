@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/kohmebot/kohme/internal/util"
 	"github.com/kohmebot/pkg/chain"
 	"github.com/kohmebot/pkg/command"
 	"github.com/kohmebot/plugin/v2"
@@ -17,7 +18,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.0"
+const coreVersion = "v1.1.1"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -48,29 +49,23 @@ func (c *Core) OnInit(engine plugin.Engine, env plugin.Env) error {
 		return err
 	}
 	err = c.db.AutoMigrate(&PluginRecord{})
-	if err != nil {
-		return err
+
+	register := []func(plugin.Engine, plugin.Env) error{
+		c.onHelp,
+		c.onPing,
+		c.onPlugin,
+		c.onToggle,
+		c.onMetric,
+		c.onRestart,
 	}
-	err = c.onHelp(engine, env)
-	if err != nil {
-		return err
+
+	for _, r := range register {
+		err = r(engine, env)
+		if err != nil {
+			return err
+		}
 	}
-	err = c.onPing(engine, env)
-	if err != nil {
-		return err
-	}
-	err = c.onPlugin(engine, env)
-	if err != nil {
-		return err
-	}
-	err = c.onToggle(engine, env)
-	if err != nil {
-		return err
-	}
-	err = c.onMetric(engine, env)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
@@ -233,6 +228,10 @@ func (c *Core) OnHelp(ctx *zero.Ctx) {
 					},
 				},
 				Desc: "查看性能指标",
+			},
+			{
+				CMD:  "restart",
+				Desc: "重启Kohme",
 			},
 		},
 	}
@@ -430,6 +429,38 @@ func (c *Core) onMetric(engine plugin.Engine, env plugin.Env) error {
 		msgChain.Line(message.Text(pEnv.MetricReport()))
 
 		ctx.Send(msgChain)
+
+	}).SetBlock(true)
+	return nil
+}
+
+func (c *Core) onRestart(engine plugin.Engine, env plugin.Env) error {
+	supers := env.SuperUser()
+	engine.OnCommand("restart", supers.Rule()).Handle(func(ctx *zero.Ctx) {
+		c.app.closing.Store(true)
+		ch := make(chan struct{})
+		go func() {
+			c.app.wg.Wait()
+			close(ch)
+		}()
+		ctx.Send("正在等待所有插件处理完成...")
+		var text string
+		select {
+		case <-ch:
+			text = "正在重启Kohme..."
+		case <-time.After(10 * time.Second):
+			text = "等待超时，将强制重启Kohme"
+		}
+		time.Sleep(time.Second)
+		ctx.Send(text)
+
+		exit, err := util.Restart()
+		if err != nil {
+			env.Error(ctx, fmt.Errorf("重启失败,请尝试手动重启: %w", err))
+			c.app.closing.Store(false)
+			return
+		}
+		exit()
 
 	}).SetBlock(true)
 	return nil

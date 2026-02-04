@@ -8,6 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"maps"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,6 +23,9 @@ type App struct {
 	// 插件名称序列，这个表明了加载顺序
 	pluginNameSeq []string
 	envMp         map[string]*impl.Env
+
+	closing atomic.Bool
+	wg      sync.WaitGroup
 }
 
 func New(opts ...Option) *App {
@@ -50,6 +55,15 @@ func (a *App) Start() error {
 
 	bootDuration := make(map[string]time.Duration)
 
+	// 确保在所有PreHandler前
+	a.Engine.UsePreHandler(func(ctx *zero.Ctx) bool {
+		if a.closing.Load() {
+			return false
+		}
+		a.wg.Add(1)
+		return true
+	})
+
 	for _, name := range a.pluginNameSeq {
 		p := a.pluginMp[name]
 		start := time.Now()
@@ -59,6 +73,12 @@ func (a *App) Start() error {
 		}
 		bootDuration[name] += time.Since(start)
 	}
+
+	// 确保在所有PostHandler后
+	a.Engine.UsePostHandler(func(ctx *zero.Ctx) {
+		a.wg.Done()
+	})
+
 	a.PrintPlugins()
 	zero.RunAndBlock(&a.opt.AppConf.Zero, func() {
 		for _, name := range a.pluginNameSeq {
