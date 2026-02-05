@@ -23,7 +23,7 @@ type App struct {
 	envMp         map[string]*impl.Env
 	engineMp      map[string]*impl.EnvEngine
 
-	gate *Gate
+	gate Gate
 }
 
 func New(opts ...Option) *App {
