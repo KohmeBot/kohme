@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.22"
+const coreVersion = "v1.1.23"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -181,7 +181,10 @@ func (c *Core) OnBoot() {
 
 	c.env.UseBot(func(ctx *zero.Ctx) {
 		for u := range c.env.SuperUser().RangeUser() {
-			ctx.SendPrivateMessage(u, msg)
+			// 在OnBoot期间，ZeroBot的事件循环还未开始
+			// 这里使用异步防止这里阻塞
+			// 默认的一分钟时间足够撑到事件循环开始了
+			go ctx.SendPrivateMessage(u, msg)
 		}
 	})
 
