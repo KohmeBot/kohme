@@ -2,13 +2,11 @@ package impl
 
 import (
 	zero "github.com/wdvxdr1123/ZeroBot"
-	"sync"
 )
 
 type EnvEngine struct {
 	env *Env
 	e   *zero.Engine
-	wg  sync.WaitGroup
 }
 
 func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
@@ -16,14 +14,6 @@ func NewEngine(env *Env, e *zero.Engine) *EnvEngine {
 		env: env,
 		e:   e,
 	}
-	eng.UsePreHandler(func(ctx *zero.Ctx) bool {
-		if eng.env.Disable.Load() {
-			// disable
-			return false
-		}
-		eng.wg.Add(1)
-		return true
-	})
 	eng.UsePostHandler(func(ctx *zero.Ctx) {
 		eng.env.Metric.CommandEnd(string(ctx.Event.RawMessageID))
 	})
@@ -34,9 +24,13 @@ func (e *EnvEngine) withEnableRule(rules []zero.Rule) zero.Rule {
 	return func(ctx *zero.Ctx) bool {
 		for _, rule := range rules {
 			if !rule(ctx) {
-				e.wg.Done()
 				return false
 			}
+		}
+		if e.env.Disable.Load() {
+			// 当符合规则时，才判断插件是否禁用
+			// 否则可能出现非当前插件的规则，但因为该插件未启用而拦截掉其他插件的可能性
+			return false
 		}
 		return true
 	}
@@ -46,7 +40,6 @@ func (e *EnvEngine) wrapEnableRule(rules []zero.Rule) zero.Rule {
 	return func(ctx *zero.Ctx) bool {
 		for _, rule := range rules {
 			if !rule(ctx) {
-				e.wg.Done()
 				return false
 			}
 		}
@@ -59,7 +52,6 @@ func (e *EnvEngine) wrapEnableHandler(handler []zero.Handler) zero.Handler {
 		for _, h := range handler {
 			h(ctx)
 		}
-		e.wg.Done()
 	}
 }
 
@@ -154,7 +146,4 @@ func (e *EnvEngine) OnSuffixGroup(suffix []string, rules ...zero.Rule) *zero.Mat
 
 func (e *EnvEngine) OnShell(command string, model interface{}, rules ...zero.Rule) *zero.Matcher {
 	return e.e.OnShell(command, model, e.withEnableRule(rules))
-}
-func (e *EnvEngine) WaitDone() {
-	e.wg.Wait()
 }

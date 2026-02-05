@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"maps"
-	"sync/atomic"
 	"time"
 )
 
@@ -24,7 +23,7 @@ type App struct {
 	envMp         map[string]*impl.Env
 	engineMp      map[string]*impl.EnvEngine
 
-	closing atomic.Bool
+	gate *Gate
 }
 
 func New(opts ...Option) *App {
@@ -57,7 +56,7 @@ func (a *App) Start() error {
 
 	// 确保在所有PreHandler前
 	a.Engine.UsePreHandler(func(ctx *zero.Ctx) bool {
-		if a.closing.Load() {
+		if a.gate.IsClosing() {
 			return false
 		}
 		return true
@@ -74,6 +73,18 @@ func (a *App) Start() error {
 		}
 		bootDuration[name] += time.Since(start)
 	}
+
+	// 确保在所有MiddleHandler后
+	a.Engine.UseMidHandler(func(ctx *zero.Ctx) bool {
+		if a.gate.Add() {
+			return true
+		}
+		return false
+	})
+	// 确保在所有PostHandler后
+	a.Engine.UsePostHandler(func(ctx *zero.Ctx) {
+		a.gate.Done()
+	})
 
 	a.PrintPlugins()
 	zero.RunAndBlock(&a.opt.AppConf.Zero, func() {
