@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/impl"
 	fplugin "github.com/kohmebot/kohme/pkg/plugin"
+	"github.com/kohmebot/kohme/pkg/testplugin"
 	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
 	zero "github.com/wdvxdr1123/ZeroBot"
@@ -104,6 +105,10 @@ func (a *App) Start() error {
 // RegisterCore 注册核心插件
 func (a *App) RegisterCore() {
 	a.RegisterPlugins(newCore(a))
+
+	// TestPlugin
+	a.RegisterPlugins(new(testplugin.MemPlugin))
+
 }
 
 // RegisterPlugins 注册插件
