@@ -420,20 +420,21 @@ func (c *Core) onMetric(engine plugin.Engine, env plugin.Env) error {
 			return
 		}
 
+		runtime.GC()
 		var msgChain chain.MessageChain
 
 		if name == c.Name() {
 			// core
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			msgChain.Line(message.Text(fmt.Sprintf("kohme占用内存: %.4fMB", float64(m.HeapAlloc)/1024/1024)))
+			msgChain.Line(message.Text(fmt.Sprintf("kohme占用内存: %.4fMB", float64(m.HeapAlloc)/1000/1000)))
 		}
 		mem, err := pEnv.HeapMemory()
 		if err != nil {
 			c.env.Error(ctx, err)
 			return
 		}
-		msgChain.Line(message.Text(fmt.Sprintf("%s占用内存: %.4fMB", name, float64(mem)/1024/1024)))
+		msgChain.Line(message.Text(fmt.Sprintf("%s占用内存: %.4fMB", name, float64(mem)/1000/1000)))
 
 		msgChain.Line(message.Text(pEnv.MetricReport()))
 

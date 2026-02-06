@@ -88,6 +88,7 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 		if len(conf.Repo) <= 0 {
 			conf.Repo = fmt.Sprintf("github.com/kohmebot/%s", name)
 		}
+		c.Plugins[name] = conf
 	}
 	return nil
 
