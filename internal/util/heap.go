@@ -4,14 +4,10 @@ import (
 	"bytes"
 	"github.com/google/pprof/profile"
 	"runtime/pprof"
-	"sync"
 )
 
-var bufPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}
-
 func ParseHeap() (map[string]int64, error) {
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer buf.Reset()
+	buf := new(bytes.Buffer)
 
 	err := pprof.WriteHeapProfile(buf)
 	if err != nil {

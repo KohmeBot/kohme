@@ -175,12 +175,6 @@ func (e *Env) HeapMemory() (int64, error) {
 		}
 	}
 
-	for _, key := range slices.SortedFunc(maps.Keys(fileAlloc), func(a string, b string) int {
-		return int(fileAlloc[a] - fileAlloc[b])
-	}) {
-		logrus.Infof("%s: %d\n", key, fileAlloc[key])
-	}
-
 	return alloc, nil
 }
 
@@ -198,7 +192,7 @@ func (e *Env) MetricReport() string {
 	runDur.ToBestUnit()
 	bootDur := e.Metric.BootDuration
 	bootDur.ToBestUnit()
-	b.WriteString(fmt.Sprintf("%s已运行: %s\n", e.p.Name(), runDur.String()))
+	b.WriteString(fmt.Sprintf("已运行: %s\n", runDur.String()))
 	b.WriteString(fmt.Sprintf("插件加载时间: %s\n", bootDur.String()))
 	if len(commands) > 0 {
 		b.WriteString(fmt.Sprintf("指令执行时间:\n"))
