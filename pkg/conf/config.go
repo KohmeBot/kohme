@@ -79,7 +79,18 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 		c.Path = PluginPath
 	}
 
-	return c.parseFromDir(c.Path)
+	err = c.parseFromDir(c.Path)
+	if err != nil {
+		return err
+	}
+
+	for name, conf := range c.Plugins {
+		if len(conf.Repo) <= 0 {
+			conf.Repo = fmt.Sprintf("github.com/kohmebot/%s", name)
+		}
+	}
+	return nil
+
 }
 
 func (c *PluginConf) parseFromDir(dir string) error {

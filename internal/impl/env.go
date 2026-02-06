@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jhue58/latency/duration"
 	"github.com/kohmebot/kohme/internal/db"
+	"github.com/kohmebot/kohme/internal/util"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/kohme/pkg/metric"
 	"github.com/kohmebot/pkg/chain"
@@ -159,6 +160,21 @@ func (e *Env) IsDisable() bool {
 
 func (e *Env) Toggle(b bool) {
 	e.Disable.Store(!b)
+}
+
+func (e *Env) HeapMemory() (int64, error) {
+	fileAlloc, err := util.ParseHeap()
+	if err != nil {
+		return 0, err
+	}
+
+	var alloc int64
+	for f, a := range fileAlloc {
+		if strings.Contains(f, e.customConf.Repo) {
+			alloc += a
+		}
+	}
+	return alloc, nil
 }
 
 func (e *Env) MetricReport() string {
