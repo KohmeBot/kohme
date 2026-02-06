@@ -174,6 +174,13 @@ func (e *Env) HeapMemory() (int64, error) {
 			alloc += a
 		}
 	}
+
+	for _, key := range slices.SortedFunc(maps.Keys(fileAlloc), func(a string, b string) int {
+		return int(fileAlloc[a] - fileAlloc[b])
+	}) {
+		logrus.Infof("%s: %d\n", key, fileAlloc[key])
+	}
+
 	return alloc, nil
 }
 
