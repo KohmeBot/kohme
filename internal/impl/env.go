@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jhue58/latency/duration"
 	"github.com/kohmebot/kohme/internal/db"
+	"github.com/kohmebot/kohme/internal/util"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"github.com/kohmebot/kohme/pkg/metric"
 	"github.com/kohmebot/pkg/chain"
@@ -161,6 +162,22 @@ func (e *Env) Toggle(b bool) {
 	e.Disable.Store(!b)
 }
 
+func (e *Env) HeapMemory() (int64, error) {
+	fileAlloc, err := util.ParseHeap()
+	if err != nil {
+		return 0, err
+	}
+
+	var alloc int64
+	for f, a := range fileAlloc {
+		if strings.Contains(f, e.customConf.Repo) {
+			alloc += a
+		}
+	}
+
+	return alloc, nil
+}
+
 func (e *Env) MetricReport() string {
 	snaps := e.Metric.Snapshot()
 	commands := slices.SortedFunc(maps.Keys(snaps), func(a string, b string) int {
@@ -175,7 +192,7 @@ func (e *Env) MetricReport() string {
 	runDur.ToBestUnit()
 	bootDur := e.Metric.BootDuration
 	bootDur.ToBestUnit()
-	b.WriteString(fmt.Sprintf("%s已运行: %s\n", e.p.Name(), runDur.String()))
+	b.WriteString(fmt.Sprintf("已运行: %s\n", runDur.String()))
 	b.WriteString(fmt.Sprintf("插件加载时间: %s\n", bootDur.String()))
 	if len(commands) > 0 {
 		b.WriteString(fmt.Sprintf("指令执行时间:\n"))

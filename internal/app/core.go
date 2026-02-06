@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.23"
+const coreVersion = "v1.1.25"
 
 type CoreConf struct {
 	HelpTop  string `yaml:"help_top"`
@@ -421,12 +421,19 @@ func (c *Core) onMetric(engine plugin.Engine, env plugin.Env) error {
 		}
 
 		var msgChain chain.MessageChain
-
+		runtime.GC()
 		if name == c.Name() {
 			// core
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			msgChain.Line(message.Text(fmt.Sprintf("kohme占用内存: %.4fMB", float64(m.HeapAlloc)/1024/1024)))
+			msgChain.Line(message.Text(fmt.Sprintf("kohme占用内存: %.4fMB", float64(m.HeapAlloc)/1000/1000)))
+		} else {
+			mem, err := pEnv.HeapMemory()
+			if err != nil {
+				c.env.Error(ctx, err)
+				return
+			}
+			msgChain.Line(message.Text(fmt.Sprintf("%s占用内存: %.4fMB", name, float64(mem)/1000/1000)))
 		}
 
 		msgChain.Line(message.Text(pEnv.MetricReport()))
