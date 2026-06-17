@@ -1,6 +1,7 @@
 //go:generate go run ./cmd/plugin_gen
 //go:generate go fmt ./cmd/bot/plugin.gen.go
 //go:generate go mod tidy
+//go:generate go run ./cmd/schemas_gen
 package kohme
 
 import "github.com/kohmebot/plugin/v2"

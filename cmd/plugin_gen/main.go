@@ -31,7 +31,13 @@ func main() {
 
 	pluginConf := conf.PluginConf{}
 
-	if err := pluginConf.ParseYamlFile(conf.PluginConfigPath); err != nil {
+	err := pluginConf.ParseYamlFile(conf.PluginConfigPath)
+	if os.IsNotExist(err) {
+		_ = conf.CreatePluginConf()
+		err = pluginConf.ParseYamlFile(conf.PluginConfigPath)
+	}
+
+	if err != nil {
 		panic(err)
 	}
 

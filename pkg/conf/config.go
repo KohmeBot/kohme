@@ -3,6 +3,7 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kohmebot/kohme/internal/util"
 	"github.com/kohmebot/plugin/v2"
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/driver"
@@ -24,22 +25,59 @@ type ZeroConf struct {
 	ReverseWs WsConf      `json:"rws"`
 }
 
+func CreateZeroConf() error {
+	c := &ZeroConf{
+		Ws: WsConf{
+			Url:   "ws://127.0.0.1:3001",
+			Token: "",
+		},
+		ReverseWs: WsConf{
+			Url:   "ws://127.0.0.1:3002",
+			Token: "",
+		},
+		Zero: zero.Config{
+			NickName:      []string{"kohme"},
+			SuperUsers:    []int64{},
+			CommandPrefix: "/",
+		},
+	}
+	data, marshalErr := json.MarshalIndent(c, "", "  ")
+	if marshalErr != nil {
+		return fmt.Errorf("生成默认 JSON 配置失败: %w", marshalErr)
+	}
+
+	// 确保目录存在
+	if err := os.MkdirAll(filepath.Dir(BotConfigPath), 0755); err != nil {
+		return fmt.Errorf("创建配置目录失败: %w", err)
+	}
+
+	if err := os.WriteFile(BotConfigPath, data, 0644); err != nil {
+		return fmt.Errorf("写入默认配置失败: %w", err)
+	}
+
+	return nil
+}
+
 func (c *ZeroConf) initDriver() {
 	var ds []zero.Driver
 	if c.Ws.Url != "" {
 		// 正向Ws
-		clear(ds)
+		ds = nil
 		ds = append(ds, driver.NewWebSocketClient(c.Ws.Url, c.Ws.Token))
 	}
 	if c.ReverseWs.Url != "" {
 		// 反向Ws
-		clear(ds)
+		ds = nil
 		ds = append(ds, driver.NewWebSocketServer(16, c.ReverseWs.Url, c.ReverseWs.Token))
 	}
 	c.Zero.Driver = ds
 }
 
 func (c *ZeroConf) ParseJsonFile(path string) error {
+	if !util.PathExists(path) {
+		return os.ErrNotExist
+	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("无法打开 JSON 文件: %w", err)
@@ -58,14 +96,49 @@ func (c *ZeroConf) ParseJsonFile(path string) error {
 
 // PluginConf 对应plugins.yaml
 type PluginConf struct {
-	Path    string        `yaml:"path"`
-	Plugins PluginConfMap `yaml:"plugins"`
-	Groups  []int64       `yaml:"groups"`
+	Path   string  `yaml:"path"`
+	Groups []int64 `yaml:"groups"`
 	// 环境变量
-	Other map[string]any `yaml:"env"`
+	Other   map[string]any `yaml:"env"`
+	Plugins PluginConfMap  `yaml:"plugins"`
+}
+
+func CreatePluginConf() error {
+	c := &PluginConf{
+		Path:   PluginPath,
+		Groups: []int64{},
+		Plugins: PluginConfMap{
+			"core": {
+				Conf: map[string]any{
+					"help_top":  "下面是我的所有本领！",
+					"help_tail": "更多本领绝赞学习中,加入github.com/KohmeBot来教会我吧！",
+				},
+			},
+		},
+	}
+
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return fmt.Errorf("序列化 YAML 失败: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(PluginConfigPath), 0755); err != nil {
+		return fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	if err := os.WriteFile(PluginConfigPath, data, 0644); err != nil {
+		return fmt.Errorf("保存 YAML 失败: %w", err)
+	}
+
+	return nil
+
 }
 
 func (c *PluginConf) ParseYamlFile(path string) error {
+	if !util.PathExists(path) {
+		return os.ErrNotExist
+	}
+
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("无法读取 YAML 文件: %w", err)

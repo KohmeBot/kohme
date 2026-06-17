@@ -18,11 +18,11 @@ import (
 	"time"
 )
 
-const coreVersion = "v1.1.25"
+const coreVersion = "v1.1.30"
 
 type CoreConf struct {
-	HelpTop  string `yaml:"help_top"`
-	HelpTail string `yaml:"help_tail"`
+	HelpTop  string `yaml:"help_top" jsonschema:"description=Help信息顶部"`
+	HelpTail string `yaml:"help_tail" jsonschema:"description=Help信息尾部"`
 }
 
 type Core struct {
@@ -36,6 +36,10 @@ func newCore(a *App) *Core {
 	return &Core{
 		app: a,
 	}
+}
+
+func (c *Core) ConfigModel() any {
+	return new(CoreConf)
 }
 
 func (c *Core) OnInit(engine plugin.Engine, env plugin.Env) error {
