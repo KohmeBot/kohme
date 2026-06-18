@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"golang.org/x/mod/semver"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -26,6 +27,7 @@ func init()  {
 `
 
 const genPath = "./cmd/bot/plugin.gen.go"
+const schemaPath = "./cmd/schemas_gen/plugin.gen.go"
 
 func main() {
 
@@ -119,7 +121,7 @@ func gen(plugins conf.PluginConfMap) error {
 		}
 	}
 
-	return nil
+	return copyFile(genPath, schemaPath)
 }
 
 func bak() ([]byte, bool) {
@@ -152,4 +154,21 @@ func getMod(url string) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }

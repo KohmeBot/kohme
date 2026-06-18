@@ -10,7 +10,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/jhue58/latency v0.3.0
 	github.com/kohmebot/pkg v1.0.5
-	github.com/kohmebot/plugin/v2 v2.0.3
+	github.com/kohmebot/plugin/v2 v2.0.4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/wdvxdr1123/ZeroBot v1.8.1
 	golang.org/x/mod v0.25.0
@@ -36,3 +36,4 @@ require (
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )
+

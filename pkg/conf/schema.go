@@ -36,6 +36,19 @@ func ExportConfigSchemas(pgs []plugin.Plugin) {
 		out[p.Name()] = schema
 	}
 
+	r := &jsonschema.Reflector{
+		FieldNameTag: "yaml",
+	}
+	s := r.Reflect(new(PluginConf))
+	schema, _ := s.MarshalJSON()
+	out["kohme-plugin-global"] = schema
+	s = r.Reflect(new(CustomPluginConf))
+	schema, _ = s.MarshalJSON()
+	out["kohme-plugin"] = schema
+	s = jsonschema.Reflect(new(ZeroConf))
+	schema, _ = s.MarshalJSON()
+	out["kohme-zerobot"] = schema
+
 	b, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return

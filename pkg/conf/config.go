@@ -20,9 +20,9 @@ type WsConf struct {
 }
 
 type ZeroConf struct {
-	Zero      zero.Config `json:"zero"`
-	Ws        WsConf      `json:"ws"`
-	ReverseWs WsConf      `json:"rws"`
+	Zero      zero.Config `json:"zero" jsonschema:"description=ZeroBot配置"`
+	Ws        WsConf      `json:"ws" jsonschema:"description=正向WS配置"`
+	ReverseWs WsConf      `json:"rws" jsonschema:"description=反向WS配置"`
 }
 
 func CreateZeroConf() error {
@@ -96,11 +96,11 @@ func (c *ZeroConf) ParseJsonFile(path string) error {
 
 // PluginConf 对应plugins.yaml
 type PluginConf struct {
-	Path   string  `yaml:"path"`
-	Groups []int64 `yaml:"groups"`
+	Path   string  `yaml:"path" jsonschema:"description=插件路径"`
+	Groups []int64 `yaml:"groups" jsonschema:"description=开启的群"`
 	// 环境变量
-	Other   map[string]any `yaml:"env"`
-	Plugins PluginConfMap  `yaml:"plugins"`
+	Other   map[string]any `yaml:"env" jsonschema:"description=环境变量"`
+	Plugins PluginConfMap  `yaml:"plugins" jsonschema:"-"`
 }
 
 func CreatePluginConf() error {
@@ -202,21 +202,21 @@ func (c *PluginConf) parseFromDir(dir string) error {
 // CustomPluginConf 自定义插件配置
 type CustomPluginConf struct {
 	// 插件仓库地址
-	Repo string `yaml:"repo"`
+	Repo string `yaml:"repo" jsonschema:"description=插件仓库地址"`
 	// 插件指定版本
-	Version string `yaml:"version"`
+	Version string `yaml:"version" jsonschema:"description=插件版本"`
 	// 决定加载顺序
-	Seq int64 `yaml:"seq"`
+	Seq int64 `yaml:"seq" jsonschema:"description=插件加载顺序"`
 	// 是否排除(不加载)
-	Exclude bool `yaml:"exclude"`
+	Exclude bool `yaml:"exclude" jsonschema:"description=不加载该插件"`
 	// 是否禁用功能(但依旧加载)
-	Disable bool `yaml:"disable"`
+	Disable bool `yaml:"disable" jsonschema:"description=禁用功能"`
 	// 开启的群组
-	Groups []int64 `yaml:"groups"`
+	Groups []int64 `yaml:"groups" jsonschema:"description=该插件开启的群组，留空则使用全局配置"`
 	// 超级管理员列表
-	SuperUsers []int64 `yaml:"super_users"`
+	SuperUsers []int64 `yaml:"super_users" jsonschema:"description=管理员列表，留空则使用全局配置"`
 	// 插件自定义conf
-	Conf map[string]any `yaml:"conf"`
+	Conf map[string]any `yaml:"conf" jsonschema:"-"`
 }
 
 // PluginConfMap 插件配置映射，key为插件名称
