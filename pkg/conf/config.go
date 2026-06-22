@@ -96,7 +96,6 @@ func (c *ZeroConf) ParseJsonFile(path string) error {
 
 // PluginConf 对应plugins.yaml
 type PluginConf struct {
-	Path   string  `yaml:"path" jsonschema:"description=插件路径"`
 	Groups []int64 `yaml:"groups" jsonschema:"description=开启的群"`
 	// 环境变量
 	Other   map[string]any `yaml:"env" jsonschema:"description=环境变量"`
@@ -105,7 +104,6 @@ type PluginConf struct {
 
 func CreatePluginConf() error {
 	c := &PluginConf{
-		Path:   PluginPath,
 		Groups: []int64{},
 		Plugins: PluginConfMap{
 			"core": {
@@ -148,11 +146,7 @@ func (c *PluginConf) ParseYamlFile(path string) error {
 		return fmt.Errorf("解析 YAML 文件错误: %w", err)
 	}
 
-	if len(c.Path) == 0 {
-		c.Path = PluginPath
-	}
-
-	err = c.parseFromDir(c.Path)
+	err = c.parseFromDir(ConfigPath)
 	if err != nil {
 		return err
 	}

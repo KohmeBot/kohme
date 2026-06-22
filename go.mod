@@ -9,6 +9,7 @@ require (
 	github.com/google/pprof v0.0.0-20260202012954-cb029daf43ef
 	github.com/invopop/jsonschema v0.14.0
 	github.com/jhue58/latency v0.3.0
+	github.com/kohmebot/chatcount v1.1.1
 	github.com/kohmebot/pkg v1.0.5
 	github.com/kohmebot/plugin/v2 v2.0.4
 	github.com/sirupsen/logrus v1.9.3
@@ -20,20 +21,33 @@ require (
 )
 
 require (
+	github.com/FloatTech/floatbox v0.0.0-20240505082030-226ec6713e14 // indirect
+	github.com/FloatTech/gg v1.1.3 // indirect
+	github.com/FloatTech/imgfactory v0.2.2-0.20230315152233-49741fc994f9 // indirect
+	github.com/FloatTech/rendercard v0.2.0 // indirect
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d // indirect
+	github.com/RomiChan/syncx v0.0.0-20240418144900-b7402ffdebc7 // indirect
 	github.com/RomiChan/websocket v1.4.3-0.20220227141055-9b2c6168c9c5 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
+	github.com/disintegration/imaging v1.6.2 // indirect
+	github.com/ericpauley/go-quantize v0.0.0-20200331213906-ae555eb2afa4 // indirect
+	github.com/fumiama/cron v1.3.0 // indirect
+	github.com/fumiama/imgsz v0.0.4 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/orcaman/concurrent-map/v2 v2.0.1 // indirect
+	github.com/panjf2000/ants/v2 v2.10.0 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/yanyiwu/gojieba v1.4.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
+	golang.org/x/image v0.21.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )
-

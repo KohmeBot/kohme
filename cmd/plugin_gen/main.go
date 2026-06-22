@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/kohmebot/kohme/pkg/conf"
 	"golang.org/x/mod/semver"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -28,6 +32,9 @@ func init()  {
 
 const genPath = "./cmd/bot/plugin.gen.go"
 const schemaPath = "./cmd/schemas_gen/plugin.gen.go"
+const readmeName = "README.md"
+const readmeAssertPath = "docs"
+const pluginDocPath = "./.docs/docs"
 
 func main() {
 
@@ -78,6 +85,7 @@ func gen(plugins conf.PluginConfMap) error {
 		importBuilder strings.Builder
 		newBuilder    strings.Builder
 		getUrl        []string
+		urlMap        = map[string]string{}
 	)
 
 	for name, c := range plugins {
@@ -99,14 +107,22 @@ func gen(plugins conf.PluginConfMap) error {
 		}
 		importBuilder.WriteString(fmt.Sprintf(`import "%s"`, path.Join(c.Repo, name)))
 		importBuilder.WriteByte('\n')
-		newBuilder.WriteString(fmt.Sprintf("register(%s.NewPlugin)\n", name))
+		newBuilder.WriteString(fmt.Sprintf("reg.RegisterAny(%s.NewPlugin)\n", name))
 
+		var u string
 		if len(c.Version) <= 0 {
-			getUrl = append(getUrl, fmt.Sprintf("%s@latest", c.Repo))
+			u = fmt.Sprintf("%s@latest", c.Repo)
 		} else {
-			getUrl = append(getUrl, fmt.Sprintf("%s@%s", c.Repo, c.Version))
+			u = fmt.Sprintf("%s@%s", c.Repo, c.Version)
 		}
+		getUrl = append(getUrl, u)
+		urlMap[u] = name
 
+	}
+
+	if len(getUrl) > 0 {
+		importBuilder.WriteString(`import "github.com/kohmebot/kohme/pkg/reg"`)
+		importBuilder.WriteByte('\n')
 	}
 
 	p := fmt.Sprintf(template, importBuilder.String(), newBuilder.String())
@@ -117,6 +133,17 @@ func gen(plugins conf.PluginConfMap) error {
 
 	for _, u := range getUrl {
 		if err := getMod(u); err != nil {
+			return err
+		}
+	}
+
+	for _, u := range getUrl {
+		dir, err := getModDir(u)
+		if err != nil {
+			return err
+		}
+		err = copyDoc(urlMap[u], dir)
+		if err != nil {
 			return err
 		}
 	}
@@ -171,4 +198,82 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(out, in)
 	return err
+}
+
+func getModDir(url string) (string, error) {
+	cmd := exec.Command("go", "list", "-m", "-json", url)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	var mp map[string]any
+	err = json.Unmarshal(out.Bytes(), &mp)
+	if err != nil {
+		return "", err
+	}
+	dir := mp["Dir"].(string)
+	return dir, nil
+}
+
+func copyDoc(name string, modPath string) error {
+	destDir := filepath.Join(pluginDocPath, name)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("create dest dir: %w", err)
+	}
+
+	entries, err := os.ReadDir(modPath)
+	if err != nil {
+		return fmt.Errorf("read mod dir: %w", err)
+	}
+
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if strings.EqualFold(e.Name(), readmeName) {
+			if err := copyFile(
+				filepath.Join(modPath, e.Name()),
+				filepath.Join(destDir, readmeName),
+			); err != nil {
+				return fmt.Errorf("copy readme: %w", err)
+			}
+			break
+		}
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		if strings.EqualFold(e.Name(), readmeAssertPath) {
+			if err := copyDir(
+				filepath.Join(modPath, e.Name()),
+				filepath.Join(destDir, readmeAssertPath),
+			); err != nil {
+				return fmt.Errorf("copy docs: %w", err)
+			}
+			break
+		}
+	}
+
+	return nil
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0755)
+		}
+		return copyFile(path, target)
+	})
 }

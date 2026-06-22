@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"github.com/kohmebot/kohme/internal/impl"
+	"github.com/kohmebot/kohme/pkg/conf"
 	fplugin "github.com/kohmebot/kohme/pkg/plugin"
 	"github.com/kohmebot/plugin/v2"
 	"github.com/sirupsen/logrus"
@@ -35,7 +36,7 @@ func New(opts ...Option) *App {
 	a := &App{
 		opt:      defaultOpt,
 		Engine:   zero.New(),
-		manager:  fplugin.NewPluginManager(defaultOpt.PluginConf.Path),
+		manager:  fplugin.NewPluginManager(conf.ConfigPath),
 		pluginMp: make(map[string]plugin.Plugin),
 		envMp:    make(map[string]*impl.Env),
 		engineMp: make(map[string]*impl.EnvEngine),
